@@ -1,6 +1,6 @@
 {
 	"name": "vaultmind",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "VaultMind - Privacy-first AI assistant for Obsidian with local LLM support",
 	"main": "main.js",
 	"scripts": {

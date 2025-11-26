@@ -6,7 +6,9 @@
 
 VaultMind is a comprehensive Obsidian plugin that brings AI-powered task management, goal tracking, and intelligent vault organization to your knowledge base. With advanced AI chat, automatic task detection, and smart scheduling, VaultMind transforms Obsidian into a powerful productivity hub.
 
-## Key Features
+<p align="center">
+  <img src=".github/assets/demo.gif" alt="VaultMind Demo" width="800">
+</p>
 
 ### AI-Powered Assistant
 
@@ -327,10 +329,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
--   **Documentation**: [Wiki](https://github.com/shameemreza/vaultmind/wiki)
 -   **Issues**: [GitHub Issues](https://github.com/shameemreza/vaultmind/issues)
--   **Discussions**: [Community Forum](https://forum.obsidian.md)
 
 ---
 
-**VaultMind** - Transform your Obsidian vault into an intelligent productivity system 🚀
+**VaultMind** - Transform your Obsidian vault into an intelligent productivity system! 🚀
