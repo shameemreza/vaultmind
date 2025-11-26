@@ -73,29 +73,38 @@ export class AdvancedChatView extends ItemView {
         // Create chat header with enhanced controls
         const header = container.createEl('div', { cls: 'vaultmind-chat-header' });
         
-        // Session selector
+        // Session management
         const sessionControl = header.createEl('div', { cls: 'session-control' });
+        
+        // Session dropdown
         this.sessionSelectEl = sessionControl.createEl('select', { cls: 'session-selector' });
         this.updateSessionSelector();
         
         this.sessionSelectEl.addEventListener('change', () => {
             const value = this.sessionSelectEl.value;
-            if (value === 'new-session') {
-                this.createNewSession();
-            } else if (value === 'delete-session') {
-                this.deleteCurrentSession();
-            } else if (value && value !== '') {
+            if (value && value !== '' && value !== 'actions') {
                 this.switchSession(value);
             }
         });
         
+        // Session action buttons
+        const sessionActions = sessionControl.createEl('div', { cls: 'session-actions' });
+        
         // New session button
-        const newSessionBtn = sessionControl.createEl('button', {
+        const newSessionBtn = sessionActions.createEl('button', {
             cls: 'vaultmind-icon-button',
-            attr: { 'aria-label': 'New chat session' }
+            attr: { 'aria-label': 'New chat', 'title': 'New chat' }
         });
         setIcon(newSessionBtn, 'plus');
         newSessionBtn.addEventListener('click', () => this.createNewSession());
+        
+        // Delete current session button
+        const deleteBtn = sessionActions.createEl('button', {
+            cls: 'vaultmind-icon-button',
+            attr: { 'aria-label': 'Delete chat', 'title': 'Delete current chat' }
+        });
+        setIcon(deleteBtn, 'trash-2');
+        deleteBtn.addEventListener('click', () => this.deleteCurrentSession());
         
         // Control buttons
         const controls = header.createEl('div', { cls: 'vaultmind-chat-controls' });
@@ -111,18 +120,10 @@ export class AdvancedChatView extends ItemView {
         // Context settings button
         const settingsBtn = controls.createEl('button', {
             cls: 'vaultmind-icon-button',
-            attr: { 'aria-label': 'Context settings' }
+            attr: { 'aria-label': 'Context settings', 'title': 'AI context settings' }
         });
         setIcon(settingsBtn, 'settings');
         settingsBtn.addEventListener('click', () => this.openContextSettings());
-        
-        // Clear button
-        const clearBtn = controls.createEl('button', {
-            cls: 'vaultmind-icon-button',
-            attr: { 'aria-label': 'Clear current session' }
-        });
-        setIcon(clearBtn, 'trash-2');
-        clearBtn.addEventListener('click', () => this.clearCurrentSession());
 
         // Context indicator with detailed info
         this.contextEl = container.createEl('div', { cls: 'vaultmind-chat-context' });
@@ -1080,7 +1081,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         const id = `session-${Date.now()}`;
         const session: ChatSession = {
             id,
-            title: `Chat ${new Date().toLocaleDateString()}`,
+            title: `New Chat`,  // Will be updated with first message
             messages: [],
             createdAt: new Date(),
             updatedAt: new Date()
@@ -1091,6 +1092,12 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         this.messages = [];
         this.saveSessions();
         
+        // Clear messages and show welcome immediately
+        if (this.messagesEl) {
+            this.messagesEl.empty();
+            this.addWelcomeMessage();
+        }
+        
         if (this.sessionSelectEl) {
             this.updateSessionSelector();
         }
@@ -1100,12 +1107,8 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         if (!this.currentSessionId) return;
         
         const session = this.sessions.get(this.currentSessionId);
-        const confirmDelete = confirm(`Delete session "${session?.title || 'Untitled'}"?`);
-        if (!confirmDelete) {
-            // Reset dropdown to current session
-            this.updateSessionSelector();
-            return;
-        }
+        const confirmDelete = confirm(`Delete "${session?.title || 'Untitled'}"?`);
+        if (!confirmDelete) return;
         
         // Delete the session
         this.sessions.delete(this.currentSessionId);
@@ -1118,6 +1121,21 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         } else {
             this.createNewSession();
         }
+    }
+    
+    private clearAllSessions() {
+        if (this.sessions.size === 0) {
+            new Notice('No sessions to clear');
+            return;
+        }
+        
+        const confirmClear = confirm(`Clear all ${this.sessions.size} chat sessions?`);
+        if (!confirmClear) return;
+        
+        this.sessions.clear();
+        this.saveSessions();
+        this.createNewSession();
+        new Notice('All chat sessions cleared');
     }
 
     private switchSession(sessionId: string) {
@@ -1133,7 +1151,14 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         if (session) {
             this.messages = session.messages;
             this.messagesEl?.empty();
-            this.messages.forEach(msg => this.addMessage(msg));
+            
+            if (this.messages.length === 0) {
+                // Show welcome message if session is empty
+                this.addWelcomeMessage();
+            } else {
+                // Show existing messages
+                this.messages.forEach(msg => this.addMessage(msg));
+            }
         }
     }
 
@@ -1142,8 +1167,41 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         if (session) {
             session.messages = this.messages;
             session.updatedAt = new Date();
+            
+            // Update session title with first user message if still default
+            if (session.title === 'New Chat' && this.messages.length > 0) {
+                const firstUserMessage = this.messages.find(m => m.role === 'user');
+                if (firstUserMessage) {
+                    // Take first 50 chars of the message as title
+                    const content = firstUserMessage.content.substring(0, 50);
+                    session.title = content.length < firstUserMessage.content.length 
+                        ? content + '...' 
+                        : content;
+                }
+            }
+            
             this.saveSessions();
+            if (this.sessionSelectEl) {
+                this.updateSessionSelector();
+            }
         }
+    }
+    
+    private getTimeAgo(date: Date | string): string {
+        const now = new Date();
+        const then = date instanceof Date ? date : new Date(date);
+        const diff = now.getTime() - then.getTime();
+        
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        
+        return then.toLocaleDateString();
     }
 
     private clearCurrentSession() {
@@ -1171,36 +1229,31 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
                 }
             });
         
-        validSessions.forEach(session => {
-            const option = this.sessionSelectEl.createEl('option', {
-                text: session.title || 'Untitled Session',
-                value: session.id
-            });
-            
-            if (session.id === this.currentSessionId) {
-                option.selected = true;
-            }
-        });
-        
-        // Add separator if there are sessions
-        if (validSessions.length > 0) {
+        // Add placeholder if no sessions
+        if (validSessions.length === 0) {
             this.sessionSelectEl.createEl('option', {
-                text: '──────────',
+                text: 'No chat sessions',
                 value: '',
                 attr: { disabled: 'true' }
             });
-        }
-        
-        // Add action options
-        this.sessionSelectEl.createEl('option', {
-            text: '➕ New Session',
-            value: 'new-session'
-        });
-        
-        if (validSessions.length > 0) {
-            this.sessionSelectEl.createEl('option', {
-                text: '🗑️ Delete Current',
-                value: 'delete-session'
+        } else {
+            validSessions.forEach((session, index) => {
+                const messageCount = session.messages?.length || 0;
+                const timeAgo = this.getTimeAgo(session.updatedAt);
+                const title = session.title || 'Untitled';
+                
+                // Truncate long titles
+                const displayTitle = title.length > 30 ? title.substring(0, 30) + '...' : title;
+                const displayText = `${displayTitle} (${messageCount} msg${messageCount !== 1 ? 's' : ''}) • ${timeAgo}`;
+                
+                const option = this.sessionSelectEl.createEl('option', {
+                    text: displayText,
+                    value: session.id
+                });
+                
+                if (session.id === this.currentSessionId) {
+                    option.selected = true;
+                }
             });
         }
     }

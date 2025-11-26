@@ -650,7 +650,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 8px;
     padding: 12px 16px;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
@@ -1088,6 +1088,60 @@
 .vaultmind-chat-controls {
     display: flex;
     gap: 8px;
+}
+
+/* Session management UI */
+.session-control {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+    max-width: 60%;
+}
+
+.session-selector {
+    flex: 1;
+    min-width: 150px;
+    max-width: 250px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.session-selector:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.session-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.vaultmind-icon-button {
+    padding: 4px 6px;
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.vaultmind-icon-button:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+}
+
+.vaultmind-icon-button svg {
+    width: 14px;
+    height: 14px;
 }
 
 .vaultmind-icon-button {

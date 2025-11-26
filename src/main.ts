@@ -30,7 +30,7 @@ export default class VaultMindPlugin extends Plugin {
 	ribbonIcon: HTMLElement | null = null;
 
 	async onload() {
-		console.log("VaultMind: Loading plugin...");
+		// Loading plugin
 
 		// Load settings first
 		await this.loadSettings();
@@ -42,19 +42,22 @@ export default class VaultMindPlugin extends Plugin {
 		);
 
 		// Register the chat view
-		this.registerView(CHAT_VIEW_TYPE, (leaf) => new AdvancedChatView(leaf, this));
+		this.registerView(
+			CHAT_VIEW_TYPE,
+			(leaf) => new AdvancedChatView(leaf, this)
+		);
 
 		// Register commands first (lightweight)
 		this.registerCommands();
 
 		// Add settings tab with better UX
 		this.addSettingTab(new BetterSettingsTab(this.app, this));
-		
+
 		// Defer services initialization to not block startup
 		setTimeout(async () => {
 			// Initialize core services
 			await this.initializeServices();
-			
+
 			// Register additional commands
 			const { registerCommands } = await import("./commands");
 			registerCommands(this);
@@ -73,7 +76,7 @@ export default class VaultMindPlugin extends Plugin {
 					}
 				);
 				this.ribbonIcon.addClass("vaultmind-ribbon-icon");
-				
+
 				// Chat icon
 				const chatIcon = this.addRibbonIcon(
 					"message-circle",
@@ -83,8 +86,8 @@ export default class VaultMindPlugin extends Plugin {
 					}
 				);
 				chatIcon.addClass("vaultmind-chat-icon");
-				
-				console.log("VaultMind: Ribbon icons added after layout ready");
+
+				// Ribbon icons added
 			}, 100);
 		});
 
@@ -96,36 +99,39 @@ export default class VaultMindPlugin extends Plugin {
 		// Auto-index vault on startup (delayed more to not slow startup)
 		// Use requestIdleCallback for better performance
 		const scheduleIndexing = () => {
-			if ('requestIdleCallback' in window) {
-				(window as any).requestIdleCallback(async () => {
-					// Ensure services are initialized before indexing
-					if (!this.vaultIndexer) {
-						console.log("VaultMind: Waiting for services to initialize...");
-						setTimeout(scheduleIndexing, 1000);
-						return;
-					}
-					console.log("VaultMind: Auto-indexing vault...");
-					await this.indexVault();
-				}, { timeout: 10000 });
+			if ("requestIdleCallback" in window) {
+				(window as any).requestIdleCallback(
+					async () => {
+						// Ensure services are initialized before indexing
+						if (!this.vaultIndexer) {
+							// Waiting for services
+							setTimeout(scheduleIndexing, 1000);
+							return;
+						}
+						// Auto-indexing vault
+						await this.indexVault();
+					},
+					{ timeout: 10000 }
+				);
 			} else {
 				setTimeout(async () => {
 					if (!this.vaultIndexer) {
-						console.log("VaultMind: Waiting for services to initialize...");
+						// Waiting for services
 						setTimeout(scheduleIndexing, 1000);
 						return;
 					}
-					console.log("VaultMind: Auto-indexing vault...");
+					// Auto-indexing vault
 					await this.indexVault();
 				}, 5000);
 			}
 		};
 		scheduleIndexing();
 
-		console.log("VaultMind: Plugin loaded successfully");
+		// Plugin loaded successfully
 	}
 
 	async onunload() {
-		console.log("VaultMind: Unloading plugin...");
+		// Unloading plugin
 
 		// Stop background services
 		if (this.scheduler) {
@@ -140,7 +146,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Detach all views
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DASHBOARD);
 
-		console.log("VaultMind: Plugin unloaded");
+		// Plugin unloaded
 	}
 
 	async loadSettings() {
@@ -188,18 +194,18 @@ export default class VaultMindPlugin extends Plugin {
 			// Initialize and start scheduler
 			this.scheduler = new Scheduler(this as any);
 			this.scheduler.start();
-			console.log("VaultMind: Scheduler activated");
+			// Scheduler activated
 
 			// Initialize AI Manager (hot-swappable, no restart needed)
 			this.aiManager = new AIManager(this.app, this.settings);
 			this.aiProvider = await this.aiManager.getProvider();
-			console.log("VaultMind: AI Manager initialized (hot-swappable)");
+			// AI Manager initialized
 
-			console.log("VaultMind: All services initialized");
+			// All services initialized
 		} catch (error) {
-			console.error("VaultMind: Failed to initialize services", error);
+			// Service initialization failed
 			new Notice(
-				"VaultMind: Some features may not be available. Check console for details."
+				"VaultMind: Some features may be limited. Please restart Obsidian if issues persist."
 			);
 		}
 	}
@@ -251,7 +257,7 @@ export default class VaultMindPlugin extends Plugin {
 				}
 			},
 		});
-		
+
 		// Chat commands
 		this.addCommand({
 			id: "open-ai-chat",
@@ -259,12 +265,14 @@ export default class VaultMindPlugin extends Plugin {
 			callback: async () => {
 				await this.openChat();
 			},
-			hotkeys: [{
-				modifiers: ["Mod", "Shift"],
-				key: "c"
-			}]
+			hotkeys: [
+				{
+					modifiers: ["Mod", "Shift"],
+					key: "c",
+				},
+			],
 		});
-		
+
 		this.addCommand({
 			id: "ask-ai-about-note",
 			name: "Ask AI about current note",
@@ -273,12 +281,14 @@ export default class VaultMindPlugin extends Plugin {
 				await this.openChat();
 				// Send the selected text to chat
 				setTimeout(() => {
-					const chatView = this.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE)[0]?.view as AdvancedChatView;
+					const chatView = this.app.workspace.getLeavesOfType(
+						CHAT_VIEW_TYPE
+					)[0]?.view as AdvancedChatView;
 					if (chatView && chatView.setInitialMessage) {
 						chatView.setInitialMessage(selection);
 					}
 				}, 100);
-			}
+			},
 		});
 	}
 
@@ -305,7 +315,7 @@ export default class VaultMindPlugin extends Plugin {
 		this.statusBarItem.addEventListener("click", async (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
-			console.log("VaultMind: Status bar clicked - opening dashboard");
+			// Opening dashboard
 			await this.openDashboard();
 		});
 
@@ -333,7 +343,7 @@ export default class VaultMindPlugin extends Plugin {
 						await this.indexVault();
 					})
 			);
-			
+
 			menu.addItem((item) =>
 				item
 					.setTitle("Open AI Chat")
@@ -508,7 +518,7 @@ export default class VaultMindPlugin extends Plugin {
 			}
 		}
 
-		console.log("VaultMind: Dashboard opened");
+		// Dashboard opened
 	}
 
 	async indexVault() {
@@ -570,13 +580,16 @@ export default class VaultMindPlugin extends Plugin {
 				this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD);
 			leaves.forEach((leaf) => {
 				const view = leaf.view as any as DashboardView;
-				if (view && typeof view.refresh === 'function') {
+				if (view && typeof view.refresh === "function") {
 					view.refresh();
 				}
 			});
 		} catch (error) {
-			console.error("VaultMind: Indexing failed", error);
-			new Notice("Indexing failed! Check console for details.", 5000);
+			// Indexing failed
+			new Notice(
+				"Unable to index vault. Some search features may be limited.",
+				5000
+			);
 		}
 	}
 
@@ -587,27 +600,30 @@ export default class VaultMindPlugin extends Plugin {
 		if (this.aiManager) {
 			await this.aiManager.updateSettings(this.settings);
 			this.aiProvider = await this.aiManager.getProvider();
-			
+
 			// Show status based on provider
 			if (this.aiProvider) {
 				const provider = this.settings.aiProvider;
-				if (provider === 'openai' && this.settings.openAIApiKey) {
+				if (provider === "openai" && this.settings.openAIApiKey) {
 					new Notice("✓ OpenAI connected");
-				} else if (provider === 'anthropic' && this.settings.claudeApiKey) {
+				} else if (
+					provider === "anthropic" &&
+					this.settings.claudeApiKey
+				) {
 					new Notice("✓ Claude connected");
-				} else if (provider === 'ollama') {
+				} else if (provider === "ollama") {
 					new Notice("✓ Ollama connected");
-				} else if (provider === 'local') {
+				} else if (provider === "local") {
 					new Notice("✓ Local AI ready");
 				}
-			} else if (this.settings.aiProvider !== 'none') {
+			} else if (this.settings.aiProvider !== "none") {
 				new Notice("AI provider not configured");
 			}
-			
-			console.log("VaultMind: AI provider updated without restart");
+
+			new Notice("AI provider updated successfully");
 		}
 	}
-	
+
 	/**
 	 * Test AI connection
 	 */

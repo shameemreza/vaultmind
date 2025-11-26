@@ -100,11 +100,11 @@ export class DashboardView extends ItemView {
             
             // Prevent double-clicks
             if (isRefreshing) {
-                console.log('VaultMind: Already refreshing, please wait');
+                // Already refreshing
                 return;
             }
             
-            console.log('VaultMind: Refresh button clicked - starting refresh');
+            // Refresh button clicked
             isRefreshing = true;
             
             // Immediate visual feedback
@@ -117,22 +117,22 @@ export class DashboardView extends ItemView {
             refreshBtn.style.animation = 'spin 1s linear infinite';
             
             try {
-                console.log('VaultMind: Starting vault index...');
+                // Starting vault index
                 // Re-index vault first
                 await this.plugin.indexVault();
                 
                 // Wait a bit for indexing to complete
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
-                console.log('VaultMind: Refreshing dashboard display...');
+                // Refreshing dashboard
                 // Refresh the entire dashboard
                 await this.refresh();
                     
                 new Notice('Dashboard refreshed!');
-                console.log('VaultMind: Dashboard refreshed successfully');
+                // Dashboard refreshed
             } catch (error) {
-                console.error('VaultMind: Refresh failed', error);
-                new Notice('Refresh failed: ' + (error as any).message);
+                // Refresh failed
+                new Notice('Unable to refresh dashboard. Please try again.');
             } finally {
                 // Re-enable button
                 isRefreshing = false;
@@ -241,7 +241,7 @@ export class DashboardView extends ItemView {
             window.clearInterval(this.refreshInterval);
         }
         this.refreshInterval = window.setInterval(async () => {
-            console.log('VaultMind: Auto-refreshing dashboard');
+            // Auto-refreshing
             await this.refresh();
         }, 5 * 60 * 1000); // 5 minutes
     }
@@ -259,7 +259,7 @@ export class DashboardView extends ItemView {
     }
 
     async refresh() {
-        console.log('VaultMind: Refreshing dashboard - full reload');
+        // Refreshing dashboard
         
         // Clear any existing intervals
         if (this.refreshInterval) {
@@ -274,7 +274,7 @@ export class DashboardView extends ItemView {
         // Completely re-render the dashboard
         await this.onOpen();
         
-        console.log('VaultMind: Dashboard refresh complete');
+        // Dashboard refresh complete
     }
 
     private async loadDashboardData(
@@ -308,7 +308,7 @@ export class DashboardView extends ItemView {
     }
 
     private async getDashboardData(): Promise<DashboardData> {
-        console.log('VaultMind: Getting dashboard data');
+        // Getting dashboard data
         
         // Manually scan vault for real tasks
         const files = this.plugin.app.vault.getMarkdownFiles();
@@ -352,7 +352,7 @@ export class DashboardView extends ItemView {
                     
                     // Debug log for first few tasks
                     if (realTasks.length < 5) {
-                        console.log('VaultMind: Task created:', taskObj.content, 'Path:', taskObj.filePath);
+                        // Task created
                     }
                     
                     realTasks.push(taskObj);
@@ -360,7 +360,7 @@ export class DashboardView extends ItemView {
             });
         }
         
-        console.log(`VaultMind: Found ${realTasks.length} tasks in vault`);
+        // Tasks found in vault
         
         // Use real tasks if found, otherwise fall back to engine
         const tasks = realTasks.length > 0 ? realTasks : this.plugin.taskEngine.getTasks();
@@ -473,7 +473,7 @@ export class DashboardView extends ItemView {
             // Handle checkbox click
             checkbox.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                console.log('VaultMind: Toggle task completion:', task.content);
+                // Toggle task completion
                 
                 // If task was being tracked and is now completed, stop tracking
                 const activeEntry = this.plugin.timeTracker.getActiveEntry();
@@ -559,11 +559,11 @@ export class DashboardView extends ItemView {
             
             // Make task clickable to open the file
             if (task.filePath && task.filePath.trim() !== '') {
-                console.log('VaultMind: Task has filePath:', task.filePath, 'Content:', task.content);
+                // Task has file path
                 taskContentEl.addEventListener('click', async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('VaultMind: Task clicked, opening file:', task.filePath);
+                    // Opening task file
                     const file = this.plugin.app.vault.getAbstractFileByPath(task.filePath);
                     if (file && file instanceof TFile) {
                         const leaf = this.plugin.app.workspace.getLeaf(false);
@@ -812,7 +812,7 @@ export class DashboardView extends ItemView {
                     });
                     
                     tag.addEventListener('click', () => {
-                        console.log('VaultMind: Filter by tag:', project);
+                        // Filter by tag
                         this.filterTasksByTag(project);
                     });
                 });
@@ -968,8 +968,8 @@ export class DashboardView extends ItemView {
                         this.plugin.statusBarItem.setText('VaultMind: No active session');
                     }
                 } catch (error) {
-                    console.error('Failed to stop tracking:', error);
-                    new Notice('Failed to stop tracking');
+                    // Failed to stop tracking
+                    new Notice('Unable to stop time tracking. Please try again.');
                 }
             });
         } else {
