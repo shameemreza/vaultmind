@@ -96,7 +96,7 @@ function parseTasksPluginSyntax(
     };
 }
 
-function parseTaskMetadata(content: string): {
+export function parseTaskMetadata(content: string): {
     cleanContent: string;
     dueDate?: Date;
     priority?: 'high' | 'medium' | 'low';
@@ -138,6 +138,62 @@ function parseTaskMetadata(content: string): {
     if (priorityTextMatch && !priority) {
         priority = priorityTextMatch[1].toLowerCase() as 'high' | 'medium' | 'low';
         cleanContent = cleanContent.replace(priorityTextMatch[0], '').trim();
+    }
+    
+    // Enhanced priority parsing - support multiple formats
+    
+    // 1. Bracket format: [high], [medium], [low]
+    if (!priority) {
+        const bracketRegex = /\[(high|medium|low)\]/i;
+        const bracketMatch = bracketRegex.exec(content);
+        if (bracketMatch) {
+            priority = bracketMatch[1].toLowerCase() as 'high' | 'medium' | 'low';
+            cleanContent = cleanContent.replace(bracketMatch[0], '').trim();
+        }
+    }
+    
+    // 2. Exclamation format: !!!, !!, !
+    if (!priority) {
+        // Count exclamation marks (must be standalone, not part of words)
+        const exclamationMatch = content.match(/(?:^|[^!])(!!!?)(?:[^!]|$)/);
+        if (exclamationMatch) {
+            const exclamations = exclamationMatch[1];
+            if (exclamations === '!!!') {
+                priority = 'high';
+            } else if (exclamations === '!!') {
+                priority = 'medium';
+            } else if (exclamations === '!') {
+                priority = 'low';
+            }
+            if (priority) {
+                cleanContent = cleanContent.replace(exclamations, '').trim();
+            }
+        }
+    }
+    
+    // 3. Letter format: (A), (B), (C)
+    if (!priority) {
+        const letterRegex = /\(([A-C])\)/i;
+        const letterMatch = letterRegex.exec(content);
+        if (letterMatch) {
+            const letterPriorities: Record<string, 'high' | 'medium' | 'low'> = { 
+                'A': 'high', 
+                'B': 'medium', 
+                'C': 'low' 
+            };
+            priority = letterPriorities[letterMatch[1].toUpperCase()];
+            cleanContent = cleanContent.replace(letterMatch[0], '').trim();
+        }
+    }
+    
+    // 4. Hash tag format: #priority/high, #p/high
+    if (!priority) {
+        const hashRegex = /#(?:priority|p)\/(high|medium|low)/i;
+        const hashMatch = hashRegex.exec(content);
+        if (hashMatch) {
+            priority = hashMatch[1].toLowerCase() as 'high' | 'medium' | 'low';
+            // Don't remove this - keep it as a tag for filtering
+        }
     }
     
     // Parse tags (#tag format)

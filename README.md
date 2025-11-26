@@ -19,8 +19,17 @@ VaultMind is a comprehensive Obsidian plugin that brings AI-powered task managem
 ### Task Management
 
 -   **Automatic Detection**: Finds all tasks across your vault.
--   **Priority & Due Dates**: Supports `⏫ 📅 2024-12-25` format.
--   **Interactive Dashboard**: Click to complete, filter by tags.
+-   **Flexible Priority System**: Multiple formats supported:
+    -   Emoji: `⏫` (high), `🔼` (medium), `🔽` (low)
+    -   Brackets: `[high]`, `[medium]`, `[low]`
+    -   Exclamations: `!!!` (high), `!!` (medium), `!` (low)
+    -   Letters: `(A)` (high), `(B)` (medium), `(C)` (low)
+    -   Tags: `#priority/high`, `#priority/medium`, `#priority/low`
+    -   Text: `priority:: high`
+-   **Visual Priority Badges**: Color-coded badges (red/yellow/green).
+-   **Priority Filtering**: Filter dashboard by priority level.
+-   **Due Dates**: Supports `📅 2024-12-25` format.
+-   **Interactive Dashboard**: Click to complete, filter by tags or priority.
 -   **Overdue Tracking**: Visual indicators for overdue tasks.
 -   **Tag-based Organization**: Filter and organize by project tags.
 
@@ -73,14 +82,18 @@ VaultMind is a comprehensive Obsidian plugin that brings AI-powered task managem
 
 ### Creating Tasks
 
-VaultMind automatically detects tasks in standard Obsidian format:
+VaultMind automatically detects tasks in standard Obsidian format with flexible priority options:
 
 ```
 ## Today's Tasks
 
--   [ ] Complete project review ⏫ 📅 2024-12-25.
--   [ ] Call client #work.
--   [x] Update documentation.
+-   [ ] Complete project review ⏫ 📅 2024-12-25
+-   [ ] Fix critical bug [high]
+-   [ ] Update documentation !!
+-   [ ] Code review (B)
+-   [ ] Write tests priority:: low
+-   [ ] Team meeting #priority/medium
+-   [x] Deploy to staging !!!
 
 ## Recurring Tasks
 
@@ -301,15 +314,6 @@ Create task templates in your Templates folder:
 -   **No telemetry**: Zero tracking or analytics.
 -   **API keys encrypted**: Stored securely in Obsidian.
 -   **Open source**: Audit the code yourself.
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
--   Code style guidelines.
--   Development setup.
--   Pull request process.
--   Bug reporting.
 
 ## License
 

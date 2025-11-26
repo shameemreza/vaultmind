@@ -1,14 +1,17 @@
 import { ItemView, WorkspaceLeaf, Notice, setIcon, TFile, Modal, App } from 'obsidian';
 import VaultMindPlugin from '../main';
 import { DashboardData } from '../types';
+import { parseTaskMetadata } from '../utils/parser';
 
 export const VIEW_TYPE_DASHBOARD = 'vaultmind-dashboard';
 
 export class DashboardView extends ItemView {
     plugin: VaultMindPlugin;
     private activeTagFilter: string | null = null;
+    private activePriorityFilter: 'all' | 'high' | 'medium' | 'low' | 'none' = 'all';
     private refreshInterval: number | null = null;
     private timeUpdateInterval: number | null = null;
+    private sortByPriority: boolean = true;
     
     constructor(leaf: WorkspaceLeaf, plugin: VaultMindPlugin) {
         super(leaf);
@@ -161,12 +164,48 @@ export class DashboardView extends ItemView {
         
         // Tasks section (always shown)
         const tasksSection = content.createEl('div', { cls: 'vaultmind-section' });
-        const tasksHeader = tasksSection.createEl('h3');
+        const tasksHeader = tasksSection.createEl('h3', { cls: 'tasks-header-with-filters' });
         tasksHeader.empty(); // Clear any existing content
-        const tasksIcon = tasksHeader.createEl('span', { cls: 'section-icon' });
+        tasksHeader.style.display = 'flex';
+        tasksHeader.style.alignItems = 'center';
+        tasksHeader.style.justifyContent = 'space-between';
+        
+        // Title part
+        const tasksTitlePart = tasksHeader.createEl('div', { cls: 'tasks-title' });
+        tasksTitlePart.style.display = 'flex';
+        tasksTitlePart.style.alignItems = 'center';
+        const tasksIcon = tasksTitlePart.createEl('span', { cls: 'section-icon' });
         setIcon(tasksIcon, 'check-square');
-        tasksHeader.createEl('span', { text: ' Tasks' });
-        // DO NOT add any other text to this header!
+        tasksTitlePart.createEl('span', { text: ' Tasks' });
+        
+        // Filter buttons
+        const filterContainer = tasksHeader.createEl('div', { cls: 'task-filters-inline' });
+        filterContainer.style.display = 'flex';
+        filterContainer.style.gap = '4px';
+        
+        const priorities = [
+            { value: 'all', label: 'All' },
+            { value: 'high', label: 'High' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'low', label: 'Low' }
+        ];
+        
+        priorities.forEach(priority => {
+            const btn = filterContainer.createEl('button', {
+                text: priority.label,
+                cls: `filter-btn-inline ${this.activePriorityFilter === priority.value ? 'active' : ''}`
+            });
+            btn.addEventListener('click', () => {
+                // Toggle filter - if clicking the same filter, reset to 'all'
+                if (this.activePriorityFilter === priority.value && priority.value !== 'all') {
+                    this.activePriorityFilter = 'all';
+                } else {
+                    this.activePriorityFilter = priority.value as any;
+                }
+                this.refresh();
+            });
+        });
+        
         tasksContainer = tasksSection.createEl('div', { cls: 'vaultmind-tasks' });
         
         // Goals section (conditional)
@@ -294,17 +333,21 @@ export class DashboardView extends ItemView {
                         projectMatches.forEach(p => projects.add(p));
                     }
                     
+                    // Use the parser to get proper priority
+                    const parsedTask = parseTaskMetadata(text.replace(/^- \[([ x])\] /, ''));
+                    
                     const taskObj = {
                         id: `${file.path}-${index}`,
                         content: text,
                         text,
                         completed,
-                        dueDate,
+                        dueDate: parsedTask.dueDate || dueDate,
                         completedAt: completed ? new Date() : null,
-                        priority: text.includes('⏫') ? 'high' : 'medium',
+                        priority: parsedTask.priority, // Use parsed priority, not hardcoded
                         filePath: file.path,
                         lineNumber: index,
-                        project: projectMatches ? projectMatches[0] : null
+                        project: projectMatches ? projectMatches[0] : null,
+                        tags: parsedTask.tags
                     };
                     
                     // Debug log for first few tasks
@@ -461,6 +504,15 @@ export class DashboardView extends ItemView {
                 }
             });
             
+            // Add priority badge if task has priority
+            if (task.priority) {
+                const priorityBadge = li.createEl('span', {
+                    cls: `priority-badge priority-${task.priority}`,
+                    text: task.priority.toUpperCase(),
+                    attr: { 'title': `${task.priority} priority` }
+                });
+            }
+            
             const taskContentEl = li.createEl('span', { cls: 'task-content' });
             
             // Parse content for tags and make them clickable
@@ -549,26 +601,56 @@ export class DashboardView extends ItemView {
             }
         };
         
-        // Apply tag filter if active
-        const filteredOverdue = this.applyTagFilter(data.tasks.overdue);
-        const filteredToday = this.applyTagFilter(data.tasks.today);
-        const filteredUpcoming = this.applyTagFilter(data.tasks.upcoming);
-        const filteredPending = this.applyTagFilter((data.tasks as any).pending || []);
+        // Apply filters and sorting
+        const filteredOverdue = this.sortTasksByPriority(
+            this.applyPriorityFilter(this.applyTagFilter(data.tasks.overdue))
+        );
+        const filteredToday = this.sortTasksByPriority(
+            this.applyPriorityFilter(this.applyTagFilter(data.tasks.today))
+        );
+        const filteredUpcoming = this.sortTasksByPriority(
+            this.applyPriorityFilter(this.applyTagFilter(data.tasks.upcoming))
+        );
         
-        // Show filter indicator if active
+        // Show active tag filter if any
         if (this.activeTagFilter) {
-            const filterEl = container.createEl('div', { 
-                cls: 'tag-filter-indicator',
-                text: `Filtering by: ${this.activeTagFilter} `
+            const filterInfo = container.createEl('div', { 
+                cls: 'active-tag-filter',
+                text: `Filtering by tag: ${this.activeTagFilter} `
             });
-            const clearBtn = filterEl.createEl('button', {
-                text: '✕',
-                cls: 'clear-filter-btn'
+            filterInfo.style.marginBottom = '10px';
+            filterInfo.style.fontSize = '12px';
+            filterInfo.style.color = 'var(--text-muted)';
+            
+            const clearBtn = filterInfo.createEl('button', {
+                text: 'Clear',
+                cls: 'clear-tag-filter'
             });
+            clearBtn.style.marginLeft = '8px';
+            clearBtn.style.fontSize = '11px';
             clearBtn.addEventListener('click', () => {
                 this.activeTagFilter = null;
                 this.refresh();
             });
+        }
+        
+        // Check if any tasks match the filter
+        const pendingWithoutDatesPreview = this.sortTasksByPriority(
+            this.applyPriorityFilter(this.applyTagFilter(
+                ((data.tasks as any).pending?.filter((t: any) => !t.dueDate) || [])))
+        );
+        const hasFilteredTasks = filteredOverdue.length > 0 || filteredToday.length > 0 || 
+                                 filteredUpcoming.length > 0 || pendingWithoutDatesPreview.length > 0;
+        
+        if (!hasFilteredTasks && this.activePriorityFilter !== 'all') {
+            const noResultsEl = container.createEl('div', { 
+                cls: 'no-filter-results',
+                text: `No tasks found with ${this.activePriorityFilter} priority`
+            });
+            noResultsEl.style.padding = '20px';
+            noResultsEl.style.textAlign = 'center';
+            noResultsEl.style.color = 'var(--text-muted)';
+            noResultsEl.style.fontStyle = 'italic';
         }
         
         // Overdue tasks
@@ -586,9 +668,9 @@ export class DashboardView extends ItemView {
             });
             
             // Show remaining count if there are more
-            if (data.tasks.overdue.length > maxOverdue) {
+            if (filteredOverdue.length > maxOverdue) {
                 const moreEl = overdueList.createEl('li', { 
-                    text: `... and ${data.tasks.overdue.length - maxOverdue} more overdue tasks`,
+                    text: `... and ${filteredOverdue.length - maxOverdue} more overdue tasks`,
                     cls: 'more-tasks-note'
                 });
                 moreEl.style.listStyle = 'none';
@@ -599,23 +681,23 @@ export class DashboardView extends ItemView {
         }
         
         // Today's tasks
-        if (data.tasks.today.length > 0) {
+        if (filteredToday.length > 0) {
             const todayEl = container.createEl('div', { cls: 'task-group' });
             const todayHeader = todayEl.createEl('h4');
             const todayIcon = todayHeader.createEl('span', { cls: 'task-group-icon' });
             setIcon(todayIcon, 'calendar');
-            todayHeader.createEl('span', { text: ` Today (${data.tasks.today.length})` });
+            todayHeader.createEl('span', { text: ` Today (${filteredToday.length})` });
             const todayList = todayEl.createEl('ul');
             // Show up to 10 today's tasks initially
-            const maxToday = Math.min(10, data.tasks.today.length);
-            data.tasks.today.slice(0, maxToday).forEach(task => {
+            const maxToday = Math.min(10, filteredToday.length);
+            filteredToday.slice(0, maxToday).forEach(task => {
                 createTaskElement(task, todayList);
             });
             
             // Show remaining count if there are more
-            if (data.tasks.today.length > maxToday) {
+            if (filteredToday.length > maxToday) {
                 const moreEl = todayList.createEl('li', { 
-                    text: `... and ${data.tasks.today.length - maxToday} more tasks for today`,
+                    text: `... and ${filteredToday.length - maxToday} more tasks for today`,
                     cls: 'more-tasks-note'
                 });
                 moreEl.style.listStyle = 'none';
@@ -626,21 +708,23 @@ export class DashboardView extends ItemView {
         }
         
         // Upcoming tasks
-        if (data.tasks.upcoming.length > 0) {
+        if (filteredUpcoming.length > 0) {
             const upcomingEl = container.createEl('div', { cls: 'task-group' });
             const upcomingHeader = upcomingEl.createEl('h4');
             const upcomingIcon = upcomingHeader.createEl('span', { cls: 'task-group-icon' });
             setIcon(upcomingIcon, 'calendar-days');
             upcomingHeader.createEl('span', { text: ` Upcoming` });
-            const upcomingList = upcomingEl.createEl('ul');
-            data.tasks.upcoming.forEach(task => {
+            const             upcomingList = upcomingEl.createEl('ul');
+            filteredUpcoming.forEach(task => {
                 createTaskElement(task, upcomingList);
             });
         }
         
-        // All pending tasks (without dates) - apply filter
+        // All pending tasks (without dates) - apply both filters
         const allPending = (data.tasks as any).pending?.filter((t: any) => !t.dueDate) || [];
-        const pendingWithoutDates = this.applyTagFilter(allPending);
+        const pendingWithoutDates = this.sortTasksByPriority(
+            this.applyPriorityFilter(this.applyTagFilter(allPending))
+        );
         
         if (pendingWithoutDates.length > 0) {
             const pendingEl = container.createEl('div', { cls: 'task-group' });
@@ -649,7 +733,8 @@ export class DashboardView extends ItemView {
             setIcon(pendingIcon, 'list-checks');
             
             // Show filtered count if filter is active
-            const headerText = this.activeTagFilter && allPending.length !== pendingWithoutDates.length
+            const hasFilter = this.activeTagFilter || this.activePriorityFilter !== 'all';
+            const headerText = hasFilter && allPending.length !== pendingWithoutDates.length
                 ? ` Pending (${pendingWithoutDates.length} of ${allPending.length})`
                 : ` Pending (${pendingWithoutDates.length})`;
             pendingHeader.createEl('span', { text: headerText });
@@ -1006,6 +1091,57 @@ export class DashboardView extends ItemView {
         return tasks.filter(task => {
             const content = task.content || '';
             return content.includes(this.activeTagFilter);
+        });
+    }
+    
+    /**
+     * Apply priority filter to tasks
+     */
+    private applyPriorityFilter(tasks: any[]): any[] {
+        if (this.activePriorityFilter === 'all') return tasks;
+        
+        const filtered = tasks.filter(task => {
+            if (this.activePriorityFilter === 'none') {
+                return !task.priority;
+            } else {
+                return task.priority === this.activePriorityFilter;
+            }
+        });
+        
+        return filtered;
+    }
+    
+    /**
+     * Sort tasks by priority
+     */
+    private sortTasksByPriority(tasks: any[]): any[] {
+        if (!this.sortByPriority) return tasks;
+        
+        const priorityOrder: Record<string, number> = { 
+            'high': 0, 
+            'medium': 1, 
+            'low': 2 
+        };
+        
+        return tasks.sort((a, b) => {
+            // First sort by priority
+            const aPriority = a.priority ? priorityOrder[a.priority] : 3;
+            const bPriority = b.priority ? priorityOrder[b.priority] : 3;
+            const priorityDiff = aPriority - bPriority;
+            
+            if (priorityDiff !== 0) return priorityDiff;
+            
+            // Then by due date if both have dates
+            if (a.dueDate && b.dueDate) {
+                return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            }
+            
+            // Tasks with due dates come first
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+            
+            // Finally alphabetically
+            return (a.content || '').localeCompare(b.content || '');
         });
     }
 }
