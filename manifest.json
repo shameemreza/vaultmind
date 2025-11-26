@@ -1,0 +1,14 @@
+{
+	"id": "vaultmind",
+	"name": "VaultMind",
+	"version": "0.3.0",
+	"minAppVersion": "1.4.0",
+	"description": "Privacy-first AI assistant for Obsidian. Understands your vault, tracks tasks and goals, provides intelligent insights - all running locally.",
+	"author": "Shameem Reza",
+	"authorUrl": "https://github.com/shameemreza",
+	"fundingUrl": {
+		"Buy Me a Coffee": "https://ko-fi.com/shameemreza",
+		"GitHub Sponsor": "https://github.com/sponsors/shameemreza"
+	},
+	"isDesktopOnly": true
+}

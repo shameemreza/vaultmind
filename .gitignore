@@ -1,0 +1,106 @@
+# Build outputs
+main.js
+main.js.map
+styles.css.map
+dist/
+build/
+
+# Development files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+tmp/
+
+# Cache files
+.eslintcache
+.stylelintcache
+*.cache
+
+# Documentation builds
+docs/_build/
+docs/.vitepress/dist/
+
+# TypeScript
+*.tsbuildinfo
+.tsc-cache/
+
+# Package lock files (choose one)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Test files
+test-vault/
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/app.json
+.obsidian/appearance.json
+.obsidian/core-plugins.json
+.obsidian/core-plugins-migration.json
+.obsidian/community-plugins.json
+.obsidian/hotkeys.json
+
+# Local development
+data.json
+.obsidian/plugins/*/data.json
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/styles.css
+
+# Backup files
+*.backup
+*.bak
+backup/
+
+# Audio files (if not needed in repo)
+# *.mp3
+# *.wav
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Debug files
+debug.log
+lerna-debug.log
+
+# OS generated files
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Custom
+TODO.local.md
+NOTES.local.md
+scratch/
+TASKS.md
+CLEANUP_GUIDE.md
+PRIORITY_IMPLEMENTATION_PLAN.md
+AGENTS.md

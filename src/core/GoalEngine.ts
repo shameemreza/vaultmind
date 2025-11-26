@@ -1,0 +1,89 @@
+import { App } from 'obsidian';
+import { VaultMindGoal, IGoalEngine } from '../types';
+import { VaultIndexer } from './VaultIndexer';
+import { TaskEngine } from './TaskEngine';
+
+export class GoalEngine implements IGoalEngine {
+    private app: App | null = null;
+    private vaultIndexer: VaultIndexer;
+    private taskEngine: TaskEngine;
+    private goals: Map<string, VaultMindGoal> = new Map();
+    
+    constructor(vaultIndexer: VaultIndexer, taskEngine: TaskEngine) {
+        this.vaultIndexer = vaultIndexer;
+        this.taskEngine = taskEngine;
+    }
+
+    async initialize(app: App): Promise<void> {
+        this.app = app;
+        await this.scanGoals();
+    }
+
+    async scanGoals(): Promise<VaultMindGoal[]> {
+        const index = this.vaultIndexer.getIndex();
+        this.goals.clear();
+        
+        // Get all goals from the index
+        for (const goal of index.goals.values()) {
+            this.goals.set(goal.id, goal);
+        }
+        
+        console.log(`VaultMind: Found ${this.goals.size} goals`);
+        return Array.from(this.goals.values());
+    }
+
+    getGoal(id: string): VaultMindGoal | undefined {
+        return this.goals.get(id);
+    }
+
+    getGoals(): VaultMindGoal[] {
+        return Array.from(this.goals.values());
+    }
+
+    async updateGoal(id: string, updates: Partial<VaultMindGoal>): Promise<void> {
+        const goal = this.goals.get(id);
+        if (!goal) {
+            throw new Error(`Goal ${id} not found`);
+        }
+        
+        Object.assign(goal, updates);
+        goal.updatedAt = new Date();
+        this.goals.set(id, goal);
+    }
+
+    calculateProgress(goalId: string): number {
+        const goal = this.goals.get(goalId);
+        if (!goal) return 0;
+        
+        // Calculate based on milestones
+        if (goal.milestones.length > 0) {
+            const completed = goal.milestones.filter(m => m.completed).length;
+            return (completed / goal.milestones.length) * 100;
+        }
+        
+        // Calculate based on linked tasks
+        if (goal.linkedTasks.length > 0) {
+            const tasks = goal.linkedTasks
+                .map(taskId => this.taskEngine.getTask(taskId))
+                .filter(task => task !== undefined);
+            
+            const completed = tasks.filter(t => t!.completed).length;
+            return tasks.length > 0 ? (completed / tasks.length) * 100 : 0;
+        }
+        
+        return goal.progress;
+    }
+
+    async linkTask(goalId: string, taskId: string): Promise<void> {
+        const goal = this.goals.get(goalId);
+        if (!goal) {
+            throw new Error(`Goal ${goalId} not found`);
+        }
+        
+        if (!goal.linkedTasks.includes(taskId)) {
+            goal.linkedTasks.push(taskId);
+            goal.progress = this.calculateProgress(goalId);
+            await this.updateGoal(goalId, { linkedTasks: goal.linkedTasks, progress: goal.progress });
+        }
+    }
+}

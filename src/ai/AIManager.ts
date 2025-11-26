@@ -1,0 +1,549 @@
+import { App, Notice, requestUrl } from 'obsidian';
+import { 
+    AIProvider, 
+    VaultMindSettings,
+    AIContext,
+    SummaryOptions
+} from '../types';
+import { SimpleEmbeddings } from './SimpleEmbeddings';
+
+/**
+ * AIManager - Handles hot-swappable AI providers without restart
+ * Manages provider lifecycle and switching dynamically
+ */
+export class AIManager {
+    private app: App;
+    private settings: VaultMindSettings;
+    private currentProvider: AIProvider | null = null;
+    private embeddings: SimpleEmbeddings;
+    private providerCache: Map<string, AIProvider> = new Map();
+    private isInitializing = false;
+    
+    constructor(app: App, settings: VaultMindSettings) {
+        this.app = app;
+        this.settings = settings;
+        this.embeddings = new SimpleEmbeddings();
+    }
+    
+    /**
+     * Get or create the current AI provider
+     * Hot-swappable without restart
+     */
+    async getProvider(): Promise<AIProvider | null> {
+        const providerKey = this.getProviderKey();
+        
+        // If provider hasn't changed and exists, return it
+        if (this.currentProvider && this.providerCache.has(providerKey)) {
+            return this.currentProvider;
+        }
+        
+        // If already initializing, wait
+        if (this.isInitializing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return this.getProvider();
+        }
+        
+        this.isInitializing = true;
+        
+        try {
+            // Create new provider based on settings
+            const provider = await this.createProvider();
+            
+            if (provider) {
+                // Clean up old provider if different
+                if (this.currentProvider && this.currentProvider !== provider) {
+                    await this.currentProvider.cleanup();
+                }
+                
+                this.currentProvider = provider;
+                this.providerCache.set(providerKey, provider);
+            }
+            
+            return this.currentProvider;
+        } finally {
+            this.isInitializing = false;
+        }
+    }
+    
+    /**
+     * Create provider based on current settings
+     */
+    private async createProvider(): Promise<AIProvider | null> {
+        const { aiProvider } = this.settings;
+        
+        if (aiProvider === 'none') {
+            return null;
+        }
+        
+        // Check cache first
+        const cacheKey = this.getProviderKey();
+        if (this.providerCache.has(cacheKey)) {
+            return this.providerCache.get(cacheKey)!;
+        }
+        
+        let provider: AIProvider | null = null;
+        
+        switch (aiProvider) {
+            case 'openai':
+                if (this.settings.openAIApiKey) {
+                    provider = new OpenAIProvider(this.settings);
+                }
+                break;
+                
+            case 'anthropic':
+                if (this.settings.claudeApiKey) {
+                    provider = new AnthropicProvider(this.settings);
+                }
+                break;
+                
+            case 'ollama':
+                provider = new OllamaProvider(this.settings);
+                break;
+                
+            case 'local':
+            default:
+                provider = new LocalProvider(this.settings, this.embeddings);
+                break;
+        }
+        
+        if (provider) {
+            try {
+                await provider.initialize();
+                return provider;
+            } catch (error) {
+                console.error(`Failed to initialize ${aiProvider} provider:`, error);
+                // Fall back to local provider
+                if (aiProvider !== 'local') {
+                    provider = new LocalProvider(this.settings, this.embeddings);
+                    await provider.initialize();
+                    return provider;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get cache key for current provider configuration
+     */
+    private getProviderKey(): string {
+        const { aiProvider, openAIApiKey, claudeApiKey, ollamaEndpoint } = this.settings;
+        return `${aiProvider}-${openAIApiKey || ''}-${claudeApiKey || ''}-${ollamaEndpoint || ''}`;
+    }
+    
+    /**
+     * Update settings and hot-swap provider if needed
+     */
+    async updateSettings(settings: VaultMindSettings) {
+        const oldKey = this.getProviderKey();
+        this.settings = settings;
+        const newKey = this.getProviderKey();
+        
+        // If provider config changed, clear cache to force recreation
+        if (oldKey !== newKey) {
+            this.providerCache.delete(oldKey);
+        }
+    }
+    
+    /**
+     * Test current provider connectivity
+     */
+    async testConnection(): Promise<boolean> {
+        const provider = await this.getProvider();
+        if (!provider) return false;
+        
+        try {
+            // Simple test query
+            const response = await provider.answerQuestion('Test', 'Test context');
+            return response.length > 0;
+        } catch {
+            return false;
+        }
+    }
+    
+    /**
+     * Clean up all providers
+     */
+    async cleanup() {
+        for (const provider of this.providerCache.values()) {
+            await provider.cleanup();
+        }
+        this.providerCache.clear();
+        this.currentProvider = null;
+    }
+}
+
+/**
+ * OpenAI Provider
+ */
+class OpenAIProvider implements AIProvider {
+    name = 'OpenAI';
+    type: 'local' | 'cloud' | 'external' = 'cloud';
+    private settings: VaultMindSettings;
+    
+    constructor(settings: VaultMindSettings) {
+        this.settings = settings;
+    }
+    
+    async initialize(): Promise<void> {
+        // Test API key
+        const response = await requestUrl({
+            url: 'https://api.openai.com/v1/models',
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${this.settings.openAIApiKey}`
+            }
+        });
+        
+        if (response.status !== 200) {
+            throw new Error('Invalid OpenAI API key');
+        }
+    }
+    
+    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
+        const response = await this.callOpenAI(
+            `Summarize this text (max ${options?.maxLength || 150} chars): ${content}`
+        );
+        return response;
+    }
+    
+    async answerQuestion(question: string, context: string): Promise<string> {
+        const response = await this.callOpenAI(
+            `Based on this context, answer the question:\nContext: ${context}\nQuestion: ${question}`
+        );
+        return response;
+    }
+    
+    async generateSuggestions(context: AIContext): Promise<string[]> {
+        const response = await this.callOpenAI(
+            `Give 5 brief suggestions based on:\nTasks: ${context.tasks?.length || 0}\nGoals: ${context.goals?.length || 0}`
+        );
+        return response.split('\n').filter(s => s.trim()).slice(0, 5);
+    }
+    
+    async generateDailySummary(context: AIContext): Promise<string> {
+        const response = await this.callOpenAI(
+            `Create a daily summary in markdown for:\nTasks: ${context.tasks?.filter(t => t.completed).length}/${context.tasks?.length}\nGoals: ${context.goals?.length}`
+        );
+        return response;
+    }
+    
+    async generateEmbedding(text: string): Promise<Float32Array> {
+        const response = await requestUrl({
+            url: 'https://api.openai.com/v1/embeddings',
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.settings.openAIApiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'text-embedding-ada-002',
+                input: text
+            })
+        });
+        
+        const embedding = response.json.data[0].embedding;
+        return new Float32Array(embedding);
+    }
+    
+    private async callOpenAI(prompt: string): Promise<string> {
+        const response = await requestUrl({
+            url: 'https://api.openai.com/v1/chat/completions',
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.settings.openAIApiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.settings.openAIModel || 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: this.settings.maxTokens || 500,
+                temperature: this.settings.temperature || 0.7
+            })
+        });
+        
+        return response.json.choices[0].message.content;
+    }
+    
+    async cleanup(): Promise<void> {
+        // Nothing to clean up
+    }
+}
+
+/**
+ * Anthropic Provider
+ */
+class AnthropicProvider implements AIProvider {
+    name = 'Anthropic';
+    type: 'local' | 'cloud' | 'external' = 'cloud';
+    private settings: VaultMindSettings;
+    
+    constructor(settings: VaultMindSettings) {
+        this.settings = settings;
+    }
+    
+    async initialize(): Promise<void> {
+        // Test API key with minimal request
+        const response = await requestUrl({
+            url: 'https://api.anthropic.com/v1/messages',
+            method: 'POST',
+            headers: {
+                'x-api-key': this.settings.claudeApiKey || '',
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.settings.claudeModel || 'claude-3-haiku-20240307',
+                messages: [{ role: 'user', content: 'test' }],
+                max_tokens: 1
+            })
+        });
+        
+        if (response.status !== 200) {
+            throw new Error('Invalid Claude API key');
+        }
+    }
+    
+    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
+        return this.callAnthropic(
+            `Summarize this text (max ${options?.maxLength || 150} chars): ${content}`
+        );
+    }
+    
+    async answerQuestion(question: string, context: string): Promise<string> {
+        return this.callAnthropic(
+            `Based on this context, answer the question:\nContext: ${context}\nQuestion: ${question}`
+        );
+    }
+    
+    async generateSuggestions(context: AIContext): Promise<string[]> {
+        const response = await this.callAnthropic(
+            `Give 5 brief suggestions based on:\nTasks: ${context.tasks?.length || 0}\nGoals: ${context.goals?.length || 0}`
+        );
+        return response.split('\n').filter(s => s.trim()).slice(0, 5);
+    }
+    
+    async generateDailySummary(context: AIContext): Promise<string> {
+        return this.callAnthropic(
+            `Create a daily summary in markdown for:\nTasks: ${context.tasks?.filter(t => t.completed).length}/${context.tasks?.length}\nGoals: ${context.goals?.length}`
+        );
+    }
+    
+    async generateEmbedding(text: string): Promise<Float32Array> {
+        // Claude doesn't have embeddings API, use simple embeddings
+        const embeddings = new SimpleEmbeddings();
+        return embeddings.generateEmbedding(text);
+    }
+    
+    private async callAnthropic(prompt: string): Promise<string> {
+        const response = await requestUrl({
+            url: 'https://api.anthropic.com/v1/messages',
+            method: 'POST',
+            headers: {
+                'x-api-key': this.settings.claudeApiKey || '',
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.settings.claudeModel || 'claude-3-haiku-20240307',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: this.settings.maxTokens || 500
+            })
+        });
+        
+        return response.json.content[0].text;
+    }
+    
+    async cleanup(): Promise<void> {
+        // Nothing to clean up
+    }
+}
+
+/**
+ * Ollama Provider
+ */
+class OllamaProvider implements AIProvider {
+    name = 'Ollama';
+    type: 'local' | 'cloud' | 'external' = 'external';
+    private settings: VaultMindSettings;
+    private endpoint: string;
+    
+    constructor(settings: VaultMindSettings) {
+        this.settings = settings;
+        this.endpoint = settings.ollamaEndpoint || 'http://localhost:11434';
+    }
+    
+    async initialize(): Promise<void> {
+        // Check if Ollama is running
+        const response = await requestUrl({
+            url: `${this.endpoint}/api/tags`,
+            method: 'GET'
+        });
+        
+        if (response.status !== 200) {
+            throw new Error('Ollama not running or unreachable');
+        }
+    }
+    
+    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
+        return this.callOllama(
+            `Summarize this text (max ${options?.maxLength || 150} chars): ${content}`
+        );
+    }
+    
+    async answerQuestion(question: string, context: string): Promise<string> {
+        return this.callOllama(
+            `Based on this context, answer the question:\nContext: ${context}\nQuestion: ${question}`
+        );
+    }
+    
+    async generateSuggestions(context: AIContext): Promise<string[]> {
+        const response = await this.callOllama(
+            `Give 5 brief suggestions based on:\nTasks: ${context.tasks?.length || 0}\nGoals: ${context.goals?.length || 0}`
+        );
+        return response.split('\n').filter(s => s.trim()).slice(0, 5);
+    }
+    
+    async generateDailySummary(context: AIContext): Promise<string> {
+        return this.callOllama(
+            `Create a daily summary in markdown for:\nTasks: ${context.tasks?.filter(t => t.completed).length}/${context.tasks?.length}\nGoals: ${context.goals?.length}`
+        );
+    }
+    
+    async generateEmbedding(text: string): Promise<Float32Array> {
+        const response = await requestUrl({
+            url: `${this.endpoint}/api/embeddings`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.settings.ollamaModel || 'llama2',
+                prompt: text
+            })
+        });
+        
+        if (response.json.embedding) {
+            return new Float32Array(response.json.embedding);
+        }
+        
+        // Fallback to simple embeddings
+        const embeddings = new SimpleEmbeddings();
+        return embeddings.generateEmbedding(text);
+    }
+    
+    private async callOllama(prompt: string): Promise<string> {
+        const response = await requestUrl({
+            url: `${this.endpoint}/api/generate`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.settings.ollamaModel || 'llama2',
+                prompt: prompt,
+                stream: false
+            })
+        });
+        
+        return response.json.response;
+    }
+    
+    async cleanup(): Promise<void> {
+        // Nothing to clean up
+    }
+}
+
+/**
+ * Local Provider - Simple, fast, privacy-first
+ */
+class LocalProvider implements AIProvider {
+    name = 'Local';
+    type: 'local' | 'cloud' | 'external' = 'local';
+    private settings: VaultMindSettings;
+    private embeddings: SimpleEmbeddings;
+    
+    constructor(settings: VaultMindSettings, embeddings: SimpleEmbeddings) {
+        this.settings = settings;
+        this.embeddings = embeddings;
+    }
+    
+    async initialize(): Promise<void> {
+        // Nothing to initialize
+    }
+    
+    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
+        const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
+        const maxLength = options?.maxLength || 150;
+        
+        if (sentences.length === 0) {
+            return content.substring(0, maxLength);
+        }
+        
+        return sentences.slice(0, 3).join(' ').substring(0, maxLength);
+    }
+    
+    async answerQuestion(question: string, context: string): Promise<string> {
+        // Simple keyword matching
+        const keywords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const sentences = context.match(/[^.!?]+[.!?]+/g) || [];
+        
+        const relevant = sentences.find(s => 
+            keywords.some(k => s.toLowerCase().includes(k))
+        );
+        
+        return relevant ? relevant.trim() : 'Please check your notes for more information.';
+    }
+    
+    async generateSuggestions(context: AIContext): Promise<string[]> {
+        const suggestions: string[] = [];
+        
+        if (context.tasks) {
+            const overdue = context.tasks.filter(t => 
+                t.dueDate && new Date(t.dueDate) < new Date() && !t.completed
+            ).length;
+            
+            if (overdue > 0) {
+                suggestions.push(`Focus on ${overdue} overdue tasks`);
+            }
+        }
+        
+        if (context.goals) {
+            const lowProgress = context.goals.filter(g => g.progress < 30).length;
+            if (lowProgress > 0) {
+                suggestions.push(`Work on ${lowProgress} goals needing attention`);
+            }
+        }
+        
+        if (suggestions.length === 0) {
+            suggestions.push('Review your tasks and goals');
+        }
+        
+        return suggestions;
+    }
+    
+    async generateDailySummary(context: AIContext): Promise<string> {
+        const completed = context.tasks?.filter(t => t.completed).length || 0;
+        const total = context.tasks?.length || 0;
+        
+        return `# Daily Summary
+
+## Tasks
+- Completed: ${completed}/${total}
+- Progress: ${total > 0 ? Math.round((completed / total) * 100) : 0}%
+
+## Next Steps
+- Review pending tasks
+- Update goal progress
+- Plan tomorrow's priorities`;
+    }
+    
+    async generateEmbedding(text: string): Promise<Float32Array> {
+        return this.embeddings.generateEmbedding(text);
+    }
+    
+    async cleanup(): Promise<void> {
+        // Nothing to clean up
+    }
+}
