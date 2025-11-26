@@ -3,7 +3,7 @@
 	"name": "VaultMind",
 	"version": "1.0.0",
 	"minAppVersion": "1.4.0",
-	"description": "Privacy-first AI assistant for Obsidian. Understands your vault, tracks tasks and goals, provides intelligent insights - all running locally.",
+	"description": "AI-powered task management, goal tracking, and intelligent assistant for your vault. Features smart scheduling, multiple AI providers, and an interactive dashboard.",
 	"author": "Shameem Reza",
 	"authorUrl": "https://github.com/shameemreza",
 	"fundingUrl": {
