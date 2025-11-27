@@ -100,7 +100,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Use requestIdleCallback for better performance
 		const scheduleIndexing = () => {
 			if ("requestIdleCallback" in window) {
-				(window as any).requestIdleCallback(
+				window.requestIdleCallback(
 					async () => {
 						// Ensure services are initialized before indexing
 						if (!this.vaultIndexer) {
@@ -192,7 +192,7 @@ export default class VaultMindPlugin extends Plugin {
 			await this.notificationService.initialize(this.app);
 
 			// Initialize and start scheduler
-			this.scheduler = new Scheduler(this as any);
+			this.scheduler = new Scheduler(this);
 			this.scheduler.start();
 			// Scheduler activated
 
@@ -506,7 +506,7 @@ export default class VaultMindPlugin extends Plugin {
 		if (leaf) {
 			workspace.revealLeaf(leaf);
 			// Trigger a refresh after opening
-			const view = leaf.view as any as DashboardView;
+			const view = leaf.view as DashboardView;
 			if (view && view.refresh) {
 				await view.refresh();
 			}
@@ -573,7 +573,7 @@ export default class VaultMindPlugin extends Plugin {
 			const leaves =
 				this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD);
 			leaves.forEach((leaf) => {
-				const view = leaf.view as any as DashboardView;
+				const view = leaf.view as DashboardView;
 				if (view && typeof view.refresh === "function") {
 					view.refresh();
 				}

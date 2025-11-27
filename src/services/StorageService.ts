@@ -21,7 +21,7 @@ export class StorageService implements StorageAdapter {
         return this.prefix + key;
     }
 
-    private loadFromStorage(key: string): any {
+    private loadFromStorage(key: string): string | null {
         if (!this.app) {
             // Fallback to localStorage if app is not available
             return localStorage.getItem(this.getStorageKey(key));

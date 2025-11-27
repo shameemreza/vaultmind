@@ -410,11 +410,12 @@ class OllamaProvider implements AIProvider {
         
         // Check if specified model exists
         const modelName = this.settings.ollamaModel || 'qwen3-vl:8b';
-        const models = response.json.models || [];
-        const modelExists = models.some((m: any) => m.name === modelName);
+        interface OllamaModel { name: string; }
+        const models: OllamaModel[] = response.json.models || [];
+        const modelExists = models.some((m) => m.name === modelName);
         
         if (!modelExists && models.length > 0) {
-            console.debug(`VaultMind: Model ${modelName} not found. Available models:`, models.map((m: any) => m.name));
+            console.debug(`VaultMind: Model ${modelName} not found. Available models:`, models.map((m) => m.name));
             // Use first available model as fallback
             this.settings.ollamaModel = models[0].name;
             console.debug(`VaultMind: Using fallback model: ${this.settings.ollamaModel}`);

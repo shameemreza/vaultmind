@@ -64,7 +64,7 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("none", "Disabled")
 					.setValue(this.plugin.settings.aiProvider)
 					.onChange(async (value) => {
-						this.plugin.settings.aiProvider = value;
+						this.plugin.settings.aiProvider = value as "ollama" | "openai" | "anthropic" | "gemini" | "deepseek" | "grok" | "none";
 						await this.plugin.saveSettings();
 						new Notice("Restart required for AI changes");
 					})
@@ -93,7 +93,7 @@ export class SettingsTab extends PluginSettingTab {
 						.addOption("custom", "Custom")
 						.setValue(this.plugin.settings.webSearchProvider)
 						.onChange(async (value) => {
-							this.plugin.settings.webSearchProvider = value;
+							this.plugin.settings.webSearchProvider = value as "duckduckgo" | "brave" | "custom";
 							await this.plugin.saveSettings();
 							// Refresh settings display to show/hide API key field
 							this.display();
@@ -151,7 +151,7 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("both", "Both")
 					.setValue(this.plugin.settings.taskSyntax)
 					.onChange(async (value) => {
-						this.plugin.settings.taskSyntax = value;
+						this.plugin.settings.taskSyntax = value as "obsidian" | "tasks-plugin" | "both";
 						await this.plugin.saveSettings();
 					})
 			);
@@ -246,7 +246,7 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("right", "Right sidebar")
 					.setValue(this.plugin.settings.dashboardPosition)
 					.onChange(async (value) => {
-						this.plugin.settings.dashboardPosition = value;
+						this.plugin.settings.dashboardPosition = value as "left" | "right";
 						await this.plugin.saveSettings();
 					})
 			);

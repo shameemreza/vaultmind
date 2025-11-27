@@ -341,7 +341,7 @@ export interface VaultMindEvent {
     type: 'task-created' | 'task-completed' | 'goal-updated' | 
           'time-started' | 'time-stopped' | 'index-updated' |
           'report-generated' | 'ai-response';
-    data: any;
+    data: VaultMindTask | VaultMindGoal | TimeEntry | VaultIndex | string | Record<string, unknown>;
     timestamp: Date;
 }
 
@@ -425,7 +425,7 @@ export interface DashboardData {
         today: VaultMindTask[];
         overdue: VaultMindTask[];
         upcoming: VaultMindTask[];
-        pending?: any[];  // All pending tasks
+        pending?: VaultMindTask[];  // All pending tasks
         projects?: string[];  // All project tags
     };
     goals: {
@@ -459,7 +459,7 @@ export class VaultMindError extends Error {
     constructor(
         message: string,
         public code: string,
-        public details?: any
+        public details?: Record<string, unknown>
     ) {
         super(message);
         this.name = 'VaultMindError';
