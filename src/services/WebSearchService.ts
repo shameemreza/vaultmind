@@ -1,3 +1,4 @@
+import { requestUrl } from 'obsidian';
 import { WebSearchResult, VaultMindError, ErrorCodes } from '../types';
 
 export class WebSearchService {
@@ -14,14 +15,14 @@ export class WebSearchService {
     }
 
     async initialize(): Promise<void> {
-        console.log(`VaultMind: Web search service initialized with ${this.provider}`);
+        console.debug(`VaultMind: Web search service initialized with ${this.provider}`);
     }
 
     async search(query: string, limit: number = 5): Promise<WebSearchResult[]> {
         // Check cache first
         const cached = this.cache.get(query);
         if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
-            console.log('VaultMind: Using cached search results');
+            console.debug('VaultMind: Using cached search results');
             return cached.results;
         }
         
@@ -60,8 +61,8 @@ export class WebSearchService {
         const url = `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`;
         
         try {
-            const response = await fetch(url);
-            const data = await response.json();
+            const response = await requestUrl(url);
+            const data = response.json;
             
             const results: WebSearchResult[] = [];
             
@@ -94,7 +95,7 @@ export class WebSearchService {
             // If no results from instant answer, try a different approach
             if (results.length === 0) {
                 // Fallback: Use a simple scraping approach or return placeholder
-                console.log('VaultMind: No instant answers found, using fallback');
+                console.debug('VaultMind: No instant answers found, using fallback');
                 results.push({
                     title: `Search results for: ${query}`,
                     snippet: 'No instant answers available. Consider using a different search provider or refining your query.',
@@ -124,14 +125,15 @@ export class WebSearchService {
         const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`;
         
         try {
-            const response = await fetch(url, {
+            const response = await requestUrl({
+                url: url,
                 headers: {
                     'Accept': 'application/json',
                     'X-Subscription-Token': apiKey
                 }
             });
             
-            const data = await response.json();
+            const data = response.json;
             
             if (!data.web || !data.web.results) {
                 return [];
@@ -167,8 +169,8 @@ export class WebSearchService {
                 headers['Authorization'] = `Bearer ${this.apiKey}`;
             }
             
-            const response = await fetch(url, { headers });
-            const data = await response.json();
+            const response = await requestUrl({ url, headers });
+            const data = response.json;
             
             // Assuming the custom API returns an array of results
             // with title, snippet/description, and url fields
@@ -235,7 +237,7 @@ export class WebSearchService {
 
     clearCache(): void {
         this.cache.clear();
-        console.log('VaultMind: Web search cache cleared');
+        console.debug('VaultMind: Web search cache cleared');
     }
 
     async cleanup(): Promise<void> {
@@ -254,8 +256,8 @@ export class WebSearchService {
                    `inprop=url&list=search&srsearch=${encodeURIComponent(query)}&srlimit=3&origin=*`;
         
         try {
-            const response = await fetch(url);
-            const data = await response.json();
+            const response = await requestUrl(url);
+            const data = response.json;
             
             const results: WebSearchResult[] = [];
             
@@ -286,8 +288,8 @@ export class WebSearchService {
         const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&max_results=${limit}`;
         
         try {
-            const response = await fetch(url);
-            const text = await response.text();
+            const response = await requestUrl(url);
+            const text = response.text;
             
             // Parse XML response (simplified parsing)
             const results: WebSearchResult[] = [];

@@ -1,4 +1,5 @@
 import { ItemView, WorkspaceLeaf, Notice, setIcon, TFile, TFolder, Modal, App, Setting, MarkdownRenderer } from 'obsidian';
+import { ConfirmModal } from './ConfirmModal';
 import VaultMindPlugin from '../main';
 import { AIContext } from '../types';
 import { ContextManager } from '../ai/ContextManager';
@@ -131,7 +132,7 @@ export class AdvancedChatView extends ItemView {
 
         // Messages area with markdown rendering support
         this.messagesEl = container.createEl('div', { cls: 'vaultmind-chat-messages' });
-        this.loadCurrentSession();
+        await this.loadCurrentSession();
         
         // Input area with enhanced features
         const inputContainer = container.createEl('div', { cls: 'vaultmind-chat-input-container' });
@@ -177,7 +178,7 @@ export class AdvancedChatView extends ItemView {
             this.addWelcomeMessage();
         }
         
-        console.log('VaultMind Chat: UI initialized successfully');
+        console.debug('VaultMind Chat: UI initialized successfully');
         
         } catch (error) {
             console.error('VaultMind Chat: Error initializing UI', error);
@@ -240,11 +241,11 @@ export class AdvancedChatView extends ItemView {
         });
         this.sendBtn.addEventListener('click', () => this.sendMessage());
         
-        console.log('VaultMind Chat: Fallback UI created with basic functionality');
+        console.debug('VaultMind Chat: Fallback UI created with basic functionality');
     }
 
-    private addWelcomeMessage() {
-        this.addMessage({
+    private async addWelcomeMessage() {
+        await this.addMessage({
             role: 'assistant',
             content: `Hi! I'm your VaultMind AI assistant with **full access** to your vault.
 
@@ -271,7 +272,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         if (!message || this.isProcessing) return;
 
         // Add user message
-        this.addMessage({
+        await this.addMessage({
             role: 'user',
             content: message,
             timestamp: new Date()
@@ -289,7 +290,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             const response = await this.getEnhancedAIResponse(message);
             
             // Add assistant response with context info
-            this.addMessage({
+            await this.addMessage({
                 role: 'assistant',
                 content: response.content,
                 timestamp: new Date(),
@@ -301,7 +302,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             
         } catch (error) {
             console.error('VaultMind Chat Error:', error);
-            this.addMessage({
+            await this.addMessage({
                 role: 'assistant',
                 content: '❌ Sorry, I encountered an error. Please check your AI configuration in settings.',
                 timestamp: new Date()
@@ -348,11 +349,12 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
                 response = await this.handleGoalQuery(message, context);
                 break;
                 
-            case 'note_search':
+            case 'note_search': {
                 const results = await this.searchNotes(intent.query || message);
                 searchResults = results;
                 response = await this.handleNoteSearch(message, results, context);
                 break;
+            }
                 
             case 'summarize':
                 response = await this.handleSummarization(message, context);
@@ -470,10 +472,12 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         }
         
         // Add context-aware suggestions
-        response += await this.plugin.aiProvider.answerQuestion(
-            `Based on these tasks, what should I prioritize?`,
-            response + '\n' + context
-        );
+        if (this.plugin.aiProvider) {
+            response += await this.plugin.aiProvider.answerQuestion(
+                `Based on these tasks, what should I prioritize?`,
+                response + '\n' + context
+            );
+        }
         
         return response;
     }
@@ -516,11 +520,13 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             });
             
             // Add AI insights
-            response += '\n### Insights\n';
-            response += await this.plugin.aiProvider.answerQuestion(
-                'Based on these goals and their progress, what recommendations do you have?',
-                response + '\n' + context
-            );
+            if (this.plugin.aiProvider) {
+                response += '\n### Insights\n';
+                response += await this.plugin.aiProvider.answerQuestion(
+                    'Based on these goals and their progress, what recommendations do you have?',
+                    response + '\n' + context
+                );
+            }
         }
         
         return response;
@@ -548,7 +554,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
                     .replace(/\.md$/i, '')
                     .replace(/\s+notes?$/i, '')
                     .replace(/\s+content$/i, '');
-                console.log(`VaultMind: Detected note request for "${targetNote}"`);
+                console.debug(`VaultMind: Detected note request for "${targetNote}"`);
                 break;
             }
         }
@@ -623,7 +629,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         let response = `## Search Results\n\n`;
         
         if (searchResults.length === 0) {
-            console.log(`VaultMind: No search results for query "${message}"`);
+            console.debug(`VaultMind: No search results for query "${message}"`);
             // Try one more fallback - direct file search
             const allFiles = this.plugin.app.vault.getMarkdownFiles();
             const queryLower = message.toLowerCase();
@@ -649,8 +655,8 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
                 response += `• [[${result.path}|${result.title}]]\n`;
                 
                 // Add snippet if available
-                const file = this.plugin.app.vault.getAbstractFileByPath(result.path) as TFile;
-                if (file) {
+                const file = this.plugin.app.vault.getAbstractFileByPath(result.path);
+                if (file instanceof TFile) {
                     try {
                         const content = await this.plugin.app.vault.read(file);
                         const snippet = this.extractRelevantSnippet(content, message);
@@ -680,10 +686,14 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             );
             
             const combined = contents.join('\n\n---\n\n');
-            return await this.plugin.aiProvider.generateSummary(combined, {
-                style: 'detailed',
-                maxLength: 800
-            });
+            if (this.plugin.aiProvider) {
+                return await this.plugin.aiProvider.generateSummary(combined, {
+                    style: 'detailed',
+                    maxLength: 800
+                });
+            } else {
+                return 'AI provider not configured';
+            }
         } else {
             // Provide vault overview
             return await this.generateVaultSummary();
@@ -890,8 +900,8 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             async (query) => {
                 const results = await this.searchNotes(query);
                 const files = results
-                    .map(r => this.plugin.app.vault.getAbstractFileByPath(r.path) as TFile)
-                    .filter(f => f instanceof TFile);
+                    .map(r => this.plugin.app.vault.getAbstractFileByPath(r.path))
+                    .filter((f): f is TFile => f instanceof TFile);
                 
                 this.attachedNotes = [...this.attachedNotes, ...files];
                 this.updateContextIndicator();
@@ -955,8 +965,10 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         }
     }
 
-    private addMessage(message: ChatMessage) {
-        this.messages.push(message);
+    private async addMessage(message: ChatMessage, skipPush: boolean = false) {
+        if (!skipPush) {
+            this.messages.push(message);
+        }
         
         const messageEl = this.messagesEl.createEl('div', {
             cls: `vaultmind-chat-message ${message.role}`
@@ -980,7 +992,8 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         // Render content
         if (message.role === 'assistant') {
             // For assistant messages, render as markdown
-            MarkdownRenderer.renderMarkdown(
+            await MarkdownRenderer.render(
+                this.plugin.app,
                 message.content,
                 contentEl,
                 '',
@@ -1049,7 +1062,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 
     // Session management
     private loadSessions() {
-        const saved = localStorage.getItem('vaultmind-chat-sessions');
+        const saved = this.plugin.app.loadLocalStorage('vaultmind-chat-sessions');
         if (saved) {
             try {
                 const data = JSON.parse(saved);
@@ -1074,7 +1087,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 
     private saveSessions() {
         const data = Object.fromEntries(this.sessions);
-        localStorage.setItem('vaultmind-chat-sessions', JSON.stringify(data));
+        this.plugin.app.saveLocalStorage('vaultmind-chat-sessions', JSON.stringify(data));
     }
 
     private createNewSession() {
@@ -1107,20 +1120,25 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
         if (!this.currentSessionId) return;
         
         const session = this.sessions.get(this.currentSessionId);
-        const confirmDelete = confirm(`Delete "${session?.title || 'Untitled'}"?`);
-        if (!confirmDelete) return;
-        
-        // Delete the session
-        this.sessions.delete(this.currentSessionId);
-        this.saveSessions();
-        
-        // Switch to another session or create new
-        if (this.sessions.size > 0) {
-            const nextSession = Array.from(this.sessions.keys())[0];
-            this.switchSession(nextSession);
-        } else {
-            this.createNewSession();
-        }
+        new ConfirmModal(
+            this.plugin.app,
+            `Delete "${session?.title || 'Untitled'}"?`,
+            () => {
+                // Delete the session
+                this.sessions.delete(this.currentSessionId);
+                this.saveSessions();
+                
+                // Switch to another session or create new
+                if (this.sessions.size > 0) {
+                    const nextSession = Array.from(this.sessions.keys())[0];
+                    this.switchSession(nextSession);
+                } else {
+                    this.createNewSession();
+                }
+            },
+            'Delete',
+            'Cancel'
+        ).open();
     }
     
     private clearAllSessions() {
@@ -1129,24 +1147,29 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             return;
         }
         
-        const confirmClear = confirm(`Clear all ${this.sessions.size} chat sessions?`);
-        if (!confirmClear) return;
-        
-        this.sessions.clear();
-        this.saveSessions();
-        this.createNewSession();
-        new Notice('All chat sessions cleared');
+        new ConfirmModal(
+            this.plugin.app,
+            `Clear all ${this.sessions.size} chat sessions?`,
+            () => {
+                this.sessions.clear();
+                this.saveSessions();
+                this.createNewSession();
+                new Notice('All chat sessions cleared');
+            },
+            'Clear All',
+            'Cancel'
+        ).open();
     }
 
-    private switchSession(sessionId: string) {
+    private async switchSession(sessionId: string) {
         if (this.sessions.has(sessionId)) {
             this.saveCurrentSession();
             this.currentSessionId = sessionId;
-            this.loadCurrentSession();
+            await this.loadCurrentSession();
         }
     }
 
-    private loadCurrentSession() {
+    private async loadCurrentSession() {
         const session = this.sessions.get(this.currentSessionId);
         if (session) {
             this.messages = session.messages;
@@ -1154,10 +1177,12 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
             
             if (this.messages.length === 0) {
                 // Show welcome message if session is empty
-                this.addWelcomeMessage();
+                await this.addWelcomeMessage();
             } else {
-                // Show existing messages
-                this.messages.forEach(msg => this.addMessage(msg));
+                // Show existing messages (skip pushing since they're already in the array)
+                for (const msg of this.messages) {
+                    await this.addMessage(msg, true);
+                }
             }
         }
     }
@@ -1287,7 +1312,7 @@ class AdvancedAttachModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        contentEl.createEl('h2', { text: 'Attach Files & Folders' });
+        contentEl.createEl('h2', { text: 'Attach files & folders' });
         
         // Search input
         const searchContainer = contentEl.createEl('div', { cls: 'search-container' });
@@ -1427,7 +1452,7 @@ class AdvancedAttachModal extends Modal {
         const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
         
         const attachBtn = buttonContainer.createEl('button', {
-            text: 'Attach Selected',
+            text: 'Attach selected',
             cls: 'mod-cta'
         });
         
@@ -1484,7 +1509,7 @@ class VaultSearchModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        contentEl.createEl('h2', { text: 'Search Vault' });
+        contentEl.createEl('h2', { text: 'Search vault' });
         
         const searchInput = contentEl.createEl('input', {
             type: 'text',
@@ -1507,7 +1532,7 @@ class VaultSearchModal extends Modal {
         const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
         
         const searchBtn = buttonContainer.createEl('button', {
-            text: 'Search & Attach',
+            text: 'Search & attach',
             cls: 'mod-cta'
         });
         
@@ -1544,7 +1569,7 @@ class ContextSettingsModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         
-        contentEl.createEl('h2', { text: 'Context Settings' });
+        contentEl.createEl('h2', { text: 'Context settings' });
         
         new Setting(contentEl)
             .setName('Include all notes')

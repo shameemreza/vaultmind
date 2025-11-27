@@ -52,45 +52,23 @@ export class DashboardView extends ItemView {
         // Create refresh button with immediate visual feedback
         const refreshBtn = header.createEl('button', {
             text: 'Refresh',
-            cls: 'vaultmind-refresh-btn'
+            cls: 'vaultmind-button'
         });
-        refreshBtn.style.cursor = 'pointer';
-        refreshBtn.style.transition = 'all 0.2s ease';
-        refreshBtn.style.padding = '6px 12px';
-        refreshBtn.style.borderRadius = '4px';
-        refreshBtn.style.backgroundColor = 'var(--interactive-accent)';
-        refreshBtn.style.color = 'var(--text-on-accent)';
-        refreshBtn.style.border = 'none';
-        refreshBtn.style.fontWeight = '500';
         
         // Track if currently refreshing
         let isRefreshing = false;
         
-        // Add hover effects
-        refreshBtn.addEventListener('mouseenter', () => {
-            if (!isRefreshing) {
-                refreshBtn.style.opacity = '0.8';
-                refreshBtn.style.transform = 'scale(1.05)';
-                refreshBtn.style.backgroundColor = 'var(--interactive-accent-hover)';
-            }
-        });
-        refreshBtn.addEventListener('mouseleave', () => {
-            if (!isRefreshing) {
-                refreshBtn.style.opacity = '1';
-                refreshBtn.style.transform = 'scale(1)';
-                refreshBtn.style.backgroundColor = 'var(--interactive-accent)';
-            }
-        });
+        // Hover effects are handled by CSS
         
         // Add click visual feedback
         refreshBtn.addEventListener('mousedown', () => {
             if (!isRefreshing) {
-                refreshBtn.style.transform = 'scale(0.95)';
+                refreshBtn.addClass('vaultmind-scale-down');
             }
         });
         refreshBtn.addEventListener('mouseup', () => {
             if (!isRefreshing) {
-                refreshBtn.style.transform = 'scale(1)';
+                refreshBtn.removeClass('vaultmind-scale-down');
             }
         });
         
@@ -109,12 +87,8 @@ export class DashboardView extends ItemView {
             
             // Immediate visual feedback
             refreshBtn.setText('Refreshing...');
-            refreshBtn.style.opacity = '0.6';
-            refreshBtn.style.cursor = 'wait';
-            refreshBtn.style.backgroundColor = 'var(--background-modifier-border)';
-            
-            // Add spinning animation
-            refreshBtn.style.animation = 'spin 1s linear infinite';
+            refreshBtn.addClass('vaultmind-disabled');
+            refreshBtn.addClass('vaultmind-spinning');
             
             try {
                 // Starting vault index
@@ -137,10 +111,8 @@ export class DashboardView extends ItemView {
                 // Re-enable button
                 isRefreshing = false;
                 refreshBtn.setText('Refresh');
-                refreshBtn.style.opacity = '1';
-                refreshBtn.style.cursor = 'pointer';
-                refreshBtn.style.backgroundColor = 'var(--interactive-accent)';
-                refreshBtn.style.animation = 'none';
+                refreshBtn.removeClass('vaultmind-disabled');
+                refreshBtn.removeClass('vaultmind-spinning');
             }
         });
         
@@ -166,22 +138,16 @@ export class DashboardView extends ItemView {
         const tasksSection = content.createEl('div', { cls: 'vaultmind-section' });
         const tasksHeader = tasksSection.createEl('h3', { cls: 'tasks-header-with-filters' });
         tasksHeader.empty(); // Clear any existing content
-        tasksHeader.style.display = 'flex';
-        tasksHeader.style.alignItems = 'center';
-        tasksHeader.style.justifyContent = 'space-between';
+        tasksHeader.addClass('vaultmind-tasks-header');
         
         // Title part
-        const tasksTitlePart = tasksHeader.createEl('div', { cls: 'tasks-title' });
-        tasksTitlePart.style.display = 'flex';
-        tasksTitlePart.style.alignItems = 'center';
+        const tasksTitlePart = tasksHeader.createEl('div', { cls: 'tasks-title vaultmind-tasks-title-part' });
         const tasksIcon = tasksTitlePart.createEl('span', { cls: 'section-icon' });
         setIcon(tasksIcon, 'check-square');
         tasksTitlePart.createEl('span', { text: ' Tasks' });
         
         // Filter buttons
-        const filterContainer = tasksHeader.createEl('div', { cls: 'task-filters-inline' });
-        filterContainer.style.display = 'flex';
-        filterContainer.style.gap = '4px';
+        const filterContainer = tasksHeader.createEl('div', { cls: 'task-filters-inline vaultmind-filter-container' });
         
         const priorities = [
             { value: 'all', label: 'All' },
@@ -452,9 +418,7 @@ export class DashboardView extends ItemView {
         // Helper function to create clickable task with checkbox
         const createTaskElement = (task: any, list: HTMLElement, isOverdue: boolean = false) => {
             const li = list.createEl('li');
-            li.style.display = 'flex';
-            li.style.alignItems = 'center';
-            li.style.gap = '8px';
+            li.addClass('vaultmind-task-item');
             
             // Add checkbox
             const checkbox = li.createEl('input', {
@@ -462,13 +426,9 @@ export class DashboardView extends ItemView {
                 cls: 'task-checkbox'
             }) as HTMLInputElement;
             checkbox.checked = task.completed || false;
-            checkbox.style.cursor = 'pointer';
-            checkbox.style.marginRight = '8px';
-            checkbox.style.appearance = 'auto'; // Use native checkbox styling
-            (checkbox.style as any).webkitAppearance = 'checkbox'; // For Safari
-            checkbox.style.width = '16px';
-            checkbox.style.height = '16px';
-            checkbox.style.flexShrink = '0';
+            checkbox.addClass('vaultmind-checkbox');
+            checkbox.addClass('vaultmind-checkbox-wrapper');
+            checkbox.addClass('vaultmind-flex-shrink-0');
             
             // Handle checkbox click
             checkbox.addEventListener('click', async (e) => {
@@ -532,8 +492,7 @@ export class DashboardView extends ItemView {
                     cls: 'task-tag clickable-tag',
                     text: match[0]
                 });
-                tagEl.style.cursor = 'pointer';
-                tagEl.style.color = 'var(--interactive-accent)';
+                tagEl.addClass('vaultmind-tag');
                 const tagText = match[0];
                 tagEl.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -580,23 +539,11 @@ export class DashboardView extends ItemView {
                         new Notice(`Could not open file: ${task.filePath}`);
                     }
                 });
-                taskContentEl.style.cursor = 'pointer';
-                taskContentEl.style.textDecoration = 'none';
-                taskContentEl.style.color = 'var(--text-normal)';
-                taskContentEl.addEventListener('mouseenter', () => {
-                    taskContentEl.style.textDecoration = 'underline';
-                    taskContentEl.style.color = 'var(--text-accent)';
-                });
-                taskContentEl.addEventListener('mouseleave', () => {
-                    taskContentEl.style.textDecoration = 'none';
-                    taskContentEl.style.color = 'var(--text-normal)';
-                });
+                taskContentEl.addClass('vaultmind-task-content');
             } else {
                 // If no file path, log for debugging
                 console.warn('VaultMind: Task without filePath:', task.content, 'Task object:', task);
-                taskContentEl.style.cursor = 'not-allowed';
-                taskContentEl.style.color = 'var(--text-muted)';
-                taskContentEl.style.opacity = '0.7';
+                taskContentEl.addClass('vaultmind-task-disabled');
                 taskContentEl.title = 'Source file not found';
             }
         };
@@ -673,10 +620,7 @@ export class DashboardView extends ItemView {
                     text: `... and ${filteredOverdue.length - maxOverdue} more overdue tasks`,
                     cls: 'more-tasks-note'
                 });
-                moreEl.style.listStyle = 'none';
-                moreEl.style.fontStyle = 'italic';
-                moreEl.style.color = 'var(--text-muted)';
-                moreEl.style.marginTop = '8px';
+                moreEl.addClass('vaultmind-more-tasks');
             }
         }
         
@@ -700,10 +644,7 @@ export class DashboardView extends ItemView {
                     text: `... and ${filteredToday.length - maxToday} more tasks for today`,
                     cls: 'more-tasks-note'
                 });
-                moreEl.style.listStyle = 'none';
-                moreEl.style.fontStyle = 'italic';
-                moreEl.style.color = 'var(--text-muted)';
-                moreEl.style.marginTop = '8px';
+                moreEl.addClass('vaultmind-more-tasks');
             }
         }
         
@@ -799,17 +740,7 @@ export class DashboardView extends ItemView {
                         cls: 'project-tag' 
                     });
                     // Make tags clickable to filter tasks
-                    tag.style.cursor = 'pointer';
-                    tag.style.transition = 'all 0.2s ease';
-                    
-                    tag.addEventListener('mouseenter', () => {
-                        tag.style.backgroundColor = 'var(--background-modifier-hover)';
-                        tag.style.transform = 'scale(1.05)';
-                    });
-                    tag.addEventListener('mouseleave', () => {
-                        tag.style.backgroundColor = 'var(--background-modifier-form-field)';
-                        tag.style.transform = 'scale(1)';
-                    });
+                    tag.addClass('vaultmind-tag');
                     
                     tag.addEventListener('click', () => {
                         // Filter by tag
@@ -843,11 +774,11 @@ export class DashboardView extends ItemView {
             titleEl.setText(goal.title);
             
             // Log progress value for debugging
-            console.log(`VaultMind: Goal "${goal.title}" has progress: ${goal.progress}%`);
+            console.debug(`VaultMind: Goal "${goal.title}" has progress: ${goal.progress}%`);
             
             // Add click handler to open the source file
             if (goal.filePath) {
-                titleEl.style.cursor = 'pointer';
+                titleEl.addClass('vaultmind-goal-clickable');
                 titleEl.addEventListener('click', async () => {
                     const file = this.plugin.app.vault.getAbstractFileByPath(goal.filePath);
                     if (file && file instanceof TFile) {
@@ -858,16 +789,9 @@ export class DashboardView extends ItemView {
                         new Notice('Goal source file not found');
                     }
                 });
-                titleEl.addEventListener('mouseenter', () => {
-                    titleEl.style.textDecoration = 'underline';
-                    titleEl.style.color = 'var(--text-accent)';
-                });
-                titleEl.addEventListener('mouseleave', () => {
-                    titleEl.style.textDecoration = 'none';
-                    titleEl.style.color = 'var(--text-normal)';
-                });
+                // Hover effects handled by CSS
             } else {
-                titleEl.style.color = 'var(--text-muted)';
+                titleEl.addClass('vaultmind-goal-disabled');
                 titleEl.title = 'Source file not found';
             }
             
@@ -875,7 +799,7 @@ export class DashboardView extends ItemView {
             const progressValue = goal.progress || 0;
             const progressBar = goalEl.createEl('div', { cls: 'progress-bar' });
             const progressFill = progressBar.createEl('div', { cls: 'progress-fill' });
-            progressFill.style.width = `${progressValue}%`;
+            progressFill.style.width = `${progressValue}%`; // Dynamic value must stay inline
             
             const progressText = goalEl.createEl('span', { 
                 text: `${progressValue}% complete`,
@@ -951,14 +875,13 @@ export class DashboardView extends ItemView {
             });
             
             // Make button fully interactive
-            stopBtn.style.cursor = 'pointer';
-            stopBtn.style.pointerEvents = 'auto';
+            stopBtn.addClass('vaultmind-interactive-btn');
             
             // Use addEventListener for better compatibility
             stopBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Stop tracking button clicked');
+                console.debug('Stop tracking button clicked');
                 try {
                     await this.plugin.timeTracker.stopTracking();
                     new Notice('Time tracking stopped');
@@ -980,14 +903,13 @@ export class DashboardView extends ItemView {
             });
             
             // Make button fully interactive
-            startBtn.style.cursor = 'pointer';
-            startBtn.style.pointerEvents = 'auto';
+            startBtn.addClass('vaultmind-interactive-btn');
             
             // Use addEventListener for better compatibility
             startBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Start tracking button clicked');
+                console.debug('Start tracking button clicked');
                 
                 // Show task selection modal
                 const modal = new TaskSelectionModal(
@@ -1018,9 +940,7 @@ export class DashboardView extends ItemView {
                 text: 'Track time spent on tasks and projects',
                 cls: 'time-help-text'
             });
-            helpText.style.fontSize = '0.85em';
-            helpText.style.color = 'var(--text-muted)';
-            helpText.style.marginTop = '8px';
+            helpText.addClass('vaultmind-help-text');
         }
         
         // Today's total (including current session)
@@ -1042,8 +962,7 @@ export class DashboardView extends ItemView {
             const recentEl = container.createEl('div', { cls: 'recent-entries' });
             recentEl.createEl('h4', { text: 'Recent Entries' });
             const listContainer = recentEl.createDiv({ cls: 'recent-entries-list' });
-            listContainer.style.maxHeight = '150px';
-            listContainer.style.overflowY = 'auto';
+            listContainer.addClass('vaultmind-scrollable-list');
             
             const list = listContainer.createEl('ul');
             
@@ -1059,8 +978,8 @@ export class DashboardView extends ItemView {
             if (data.time.recentEntries.length > 10) {
                 const moreEl = list.createEl('li');
                 moreEl.setText(`... and ${data.time.recentEntries.length - 10} more`);
-                moreEl.style.fontStyle = 'italic';
-                moreEl.style.color = 'var(--text-muted)';
+                moreEl.addClass('vaultmind-text-muted');
+                moreEl.style.fontStyle = 'italic'; // Keep italic for emphasis
             }
         }
     }
@@ -1168,8 +1087,7 @@ class TaskSelectionModal extends Modal {
             text: 'Quick Start (No specific task)',
             cls: 'mod-cta'
         });
-        quickStartBtn.style.width = '100%';
-        quickStartBtn.style.marginBottom = '1rem';
+        quickStartBtn.addClass('vaultmind-modal-full-width');
         quickStartBtn.addEventListener('click', () => {
             this.onSelect(null);
             this.close();
@@ -1181,13 +1099,11 @@ class TaskSelectionModal extends Modal {
             type: 'text',
             placeholder: 'Filter tasks...'
         });
-        filterInput.style.width = '100%';
-        filterInput.style.marginBottom = '1rem';
+        filterInput.addClass('vaultmind-modal-full-width');
         
         // Task list container
         const taskListContainer = contentEl.createDiv({ cls: 'task-selection-list' });
-        taskListContainer.style.maxHeight = '400px';
-        taskListContainer.style.overflowY = 'auto';
+        taskListContainer.addClass('vaultmind-scrollable-400');
         
         // Render tasks
         const renderTasks = (filter: string = '') => {
@@ -1207,9 +1123,7 @@ class TaskSelectionModal extends Modal {
             
             filteredTasks.slice(0, 20).forEach(task => {
                 const taskItem = taskListContainer.createDiv({ cls: 'task-selection-item' });
-                taskItem.style.padding = '0.5rem';
-                taskItem.style.cursor = 'pointer';
-                taskItem.style.borderRadius = '4px';
+                taskItem.addClass('vaultmind-task-item-pad');
                 
                 // Add task content
                 const taskContent = taskItem.createEl('div', { text: task.content });
@@ -1223,17 +1137,11 @@ class TaskSelectionModal extends Modal {
                         text: metadata.join(' • '),
                         cls: 'task-metadata'
                     });
-                    metaEl.style.fontSize = '0.85em';
-                    metaEl.style.color = 'var(--text-muted)';
+                    metaEl.addClass('vaultmind-task-meta');
                 }
                 
                 // Hover effect
-                taskItem.addEventListener('mouseenter', () => {
-                    taskItem.style.backgroundColor = 'var(--background-modifier-hover)';
-                });
-                taskItem.addEventListener('mouseleave', () => {
-                    taskItem.style.backgroundColor = '';
-                });
+                // Hover effects handled by CSS
                 
                 // Click to select
                 taskItem.addEventListener('click', () => {

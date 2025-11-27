@@ -1,4 +1,4 @@
-import { App, Notice, requestUrl } from 'obsidian';
+import { App, requestUrl } from 'obsidian';
 import { 
     AIProvider, 
     SummaryOptions, 
@@ -37,7 +37,7 @@ export class HybridAI implements AIProvider {
         if (this.initialized) return;
         
         try {
-            console.log('VaultMind: Initializing HybridAI...');
+            console.debug('VaultMind: Initializing HybridAI...');
             
             // Initialize embeddings
             await this.fallback.initialize();
@@ -46,19 +46,19 @@ export class HybridAI implements AIProvider {
             if (this.settings.aiProvider === 'openai' && this.settings.openAIApiKey) {
                 this.apiAvailable = await this.testOpenAI();
                 if (this.apiAvailable) {
-                    console.log('VaultMind: OpenAI API available');
+                    console.debug('VaultMind: OpenAI API available');
                     this.type = 'cloud';
                 }
             } else if (this.settings.aiProvider === 'anthropic' && this.settings.claudeApiKey) {
                 this.apiAvailable = await this.testAnthropic();
                 if (this.apiAvailable) {
-                    console.log('VaultMind: Anthropic API available');
+                    console.debug('VaultMind: Anthropic API available');
                     this.type = 'cloud';
                 }
             } else if (this.settings.aiProvider === 'ollama') {
                 this.apiAvailable = await this.testOllama();
                 if (this.apiAvailable) {
-                    console.log('VaultMind: Ollama available');
+                    console.debug('VaultMind: Ollama available');
                     this.type = 'external';
                 }
             }
@@ -73,7 +73,7 @@ export class HybridAI implements AIProvider {
             }
             
             this.initialized = true;
-            console.log('VaultMind: HybridAI initialized successfully');
+            console.debug('VaultMind: HybridAI initialized successfully');
             
         } catch (error) {
             console.error('VaultMind: Failed to initialize HybridAI:', error);
@@ -380,6 +380,6 @@ export class HybridAI implements AIProvider {
         const embedData = this.embeddings.serialize();
         // Could save to plugin data here
         
-        console.log('VaultMind: HybridAI cleaned up');
+        console.debug('VaultMind: HybridAI cleaned up');
     }
 }

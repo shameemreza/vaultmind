@@ -21,7 +21,7 @@ export class ChatView extends ItemView {
     constructor(leaf: WorkspaceLeaf, plugin: VaultMindPlugin) {
         super(leaf);
         this.plugin = plugin;
-        console.log('VaultMind Chat: Constructor called');
+        console.debug('VaultMind Chat: Constructor called');
     }
 
     getViewType() {
@@ -37,7 +37,7 @@ export class ChatView extends ItemView {
     }
 
     async onOpen() {
-        console.log('VaultMind Chat: onOpen called');
+        console.debug('VaultMind Chat: onOpen called');
         
         const container = this.containerEl.children[1];
         container.empty();
@@ -108,7 +108,7 @@ export class ChatView extends ItemView {
         });
         this.sendBtn.addEventListener('click', () => this.sendMessage());
         
-        console.log('VaultMind Chat: UI created successfully');
+        console.debug('VaultMind Chat: UI created successfully');
     }
 
     private addWelcomeMessage() {

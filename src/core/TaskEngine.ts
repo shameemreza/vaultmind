@@ -32,7 +32,7 @@ export class TaskEngine implements ITaskEngine {
             this.tasks.set(task.id, task);
         }
         
-        console.log(`VaultMind: Found ${this.tasks.size} tasks`);
+        console.debug(`VaultMind: Found ${this.tasks.size} tasks`);
         return Array.from(this.tasks.values());
     }
 

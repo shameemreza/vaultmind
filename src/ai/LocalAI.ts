@@ -1,5 +1,4 @@
 import { App, Notice } from 'obsidian';
-import { DownloadProgressModal } from '../ui/DownloadModal';
 import { 
     AIProvider, 
     SummaryOptions, 
@@ -20,7 +19,7 @@ let env: any = null;
 async function loadTransformers() {
     if (!transformersModule) {
         try {
-            console.log('VaultMind: Loading transformers.js module...');
+            console.debug('VaultMind: Loading transformers.js module...');
             transformersModule = await import('@xenova/transformers');
             pipeline = transformersModule.pipeline;
             env = transformersModule.env;
@@ -48,10 +47,10 @@ async function loadTransformers() {
                 env.localURL = '';
                 env.localPathTemplate = '';
                 
-                console.log('VaultMind: Transformers.js environment configured for browser');
+                console.debug('VaultMind: Transformers.js environment configured for browser');
             }
             
-            console.log('VaultMind: Transformers.js loaded successfully');
+            console.debug('VaultMind: Transformers.js loaded successfully');
         } catch (error) {
             console.error('VaultMind: Failed to load transformers.js', error);
             throw new Error('Failed to load AI library. Please check your installation.');
@@ -94,26 +93,26 @@ export class LocalAI implements AIProvider {
         if (this.initialized) return;
         
         try {
-            console.log('VaultMind: Initializing LocalAI...');
+            console.debug('VaultMind: Initializing LocalAI...');
             
             // Load transformers.js first
             const { pipeline: pipelineFn } = await loadTransformers();
             
             // Load the selected model from registry
             if (this.currentModel && this.currentModel.type !== 'embedding') {
-                console.log(`VaultMind: Loading model ${this.currentModel.name}...`);
+                console.debug(`VaultMind: Loading model ${this.currentModel.name}...`);
                 
                 // For text generation models
                 if (this.currentModel.huggingFaceId.includes('t5')) {
                     this.model = await pipelineFn('text2text-generation', this.currentModel.huggingFaceId, {
                         progress_callback: (progress: any) => {
-                            console.log(`Model loading: ${Math.round(progress.progress)}%`);
+                            console.debug(`Model loading: ${Math.round(progress.progress)}%`);
                         }
                     });
                 } else {
                     this.model = await pipelineFn('text-generation', this.currentModel.huggingFaceId, {
                         progress_callback: (progress: any) => {
-                            console.log(`Model loading: ${Math.round(progress.progress)}%`);
+                            console.debug(`Model loading: ${Math.round(progress.progress)}%`);
                         }
                     });
                 }
@@ -121,7 +120,7 @@ export class LocalAI implements AIProvider {
             
             // Load embedding model from registry
             if (this.currentEmbeddingModel) {
-                console.log(`VaultMind: Loading embedding model ${this.currentEmbeddingModel.name}...`);
+                console.debug(`VaultMind: Loading embedding model ${this.currentEmbeddingModel.name}...`);
                 this.embedder = await pipelineFn('feature-extraction', this.currentEmbeddingModel.huggingFaceId);
             }
             
@@ -136,7 +135,7 @@ export class LocalAI implements AIProvider {
             }
             
             this.initialized = true;
-            console.log('VaultMind: LocalAI initialized successfully');
+            console.debug('VaultMind: LocalAI initialized successfully');
         } catch (error) {
             console.error('VaultMind: Failed to initialize LocalAI', error);
             throw new VaultMindError(
@@ -361,7 +360,7 @@ Time: ${Math.floor(timeTracked / 60)}h ${timeTracked % 60}m tracked
     }
 
     async cleanup(): Promise<void> {
-        console.log('VaultMind: Cleaning up LocalAI resources...');
+        console.debug('VaultMind: Cleaning up LocalAI resources...');
         
         // Clear model cache
         this.modelCache.clear();
@@ -431,103 +430,7 @@ Time: ${Math.floor(timeTracked / 60)}h ${timeTracked % 60}m tracked
         return suggestions;
     }
 
-    // ============= Model Management =============
-    
-    async downloadModel(modelName: string, app?: App): Promise<void> {
-        const modelConfig = MODEL_REGISTRY[modelName];
-        if (!modelConfig) {
-            throw new Error(`Unknown model: ${modelName}`);
-        }
-        
-        console.log(`VaultMind: Downloading model ${modelConfig.name}...`);
-        
-        // Create progress modal if app is provided
-        let progressModal: DownloadProgressModal | null = null;
-        let cancelled = false;
-        
-        if (app) {
-            progressModal = new DownloadProgressModal(
-                app,
-                `Downloading ${modelConfig.name} (${modelConfig.size})`,
-                () => {
-                    cancelled = true;
-                    console.log('VaultMind: Download cancelled by user');
-                }
-            );
-            progressModal.open();
-        }
-        
-        try {
-            // Load transformers.js first
-            const { pipeline: pipelineFn } = await loadTransformers();
-            
-            // Pre-download the model based on type
-            const pipelineType = modelConfig.type === 'embedding' ? 'feature-extraction' : 
-                                modelConfig.huggingFaceId.includes('t5') ? 'text2text-generation' : 
-                                'text-generation';
-            
-            let modelPipeline;
-            try {
-                modelPipeline = await pipelineFn(pipelineType, modelConfig.huggingFaceId, {
-                    progress_callback: (progress: any) => {
-                        if (cancelled) {
-                            throw new Error('Download cancelled');
-                        }
-                        
-                        const percent = Math.round(progress.progress || 0);
-                        console.log(`Download progress: ${percent}%`, progress);
-                        
-                        if (progressModal) {
-                            let status = 'Downloading model files...';
-                            if (progress.file) {
-                                status = `Downloading: ${progress.file}`;
-                            } else if (progress.status) {
-                                status = progress.status;
-                            }
-                            progressModal.updateProgress(percent, status);
-                        }
-                    },
-                    // Add quantization config to use smaller models
-                    quantized: true,
-                    // Use lower precision for browser compatibility
-                    model_file_name: 'model_quantized'
-                });
-            } catch (pipelineError: any) {
-                console.error('VaultMind: Pipeline creation failed:', pipelineError);
-                
-                // If WASM backend fails, provide helpful message
-                if (pipelineError.message?.includes('wasm') || pipelineError.message?.includes('create')) {
-                    throw new Error('Model initialization failed. This may be due to browser compatibility. Try refreshing Obsidian or using a different model.');
-                }
-                throw pipelineError;
-            }
-            
-            // Test the model to ensure it's working
-            console.log('VaultMind: Testing downloaded model...');
-            if (pipelineType === 'text2text-generation') {
-                await modelPipeline('Test', { max_new_tokens: 1 });
-            }
-            
-            console.log('VaultMind: Model downloaded successfully');
-            
-            if (progressModal) {
-                progressModal.setComplete(`${modelConfig.name} downloaded successfully!`);
-                setTimeout(() => progressModal.close(), 2000);
-            }
-            
-            if (app) {
-                new Notice(`Model ${modelConfig.name} downloaded successfully!`);
-            }
-        } catch (error: any) {
-            console.error('VaultMind: Model download failed', error);
-            
-            if (progressModal) {
-                progressModal.setError(error.message || 'Download failed');
-            }
-            
-            throw error;
-        }
-    }
+    // Model management removed - using cloud providers only
 
     getAvailableModels(): string[] {
         return Object.keys(MODEL_REGISTRY);

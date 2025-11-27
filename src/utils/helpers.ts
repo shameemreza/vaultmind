@@ -259,7 +259,7 @@ export function measureTime<T>(
     const result = fn();
     const duration = performance.now() - start;
     
-    console.log(`${label || 'Operation'} took ${duration.toFixed(2)}ms`);
+    console.debug(`${label || 'Operation'} took ${duration.toFixed(2)}ms`);
     
     return result;
 }
@@ -272,7 +272,7 @@ export async function measureTimeAsync<T>(
     const result = await fn();
     const duration = performance.now() - start;
     
-    console.log(`${label || 'Async operation'} took ${duration.toFixed(2)}ms`);
+    console.debug(`${label || 'Async operation'} took ${duration.toFixed(2)}ms`);
     
     return result;
 }
@@ -316,32 +316,29 @@ export async function tryOrDefaultAsync<T>(
     }
 }
 
-export function retryWithBackoff<T>(
+export async function retryWithBackoff<T>(
     fn: () => Promise<T>,
     maxRetries: number = 3,
     baseDelayMs: number = 1000
 ): Promise<T> {
-    return new Promise(async (resolve, reject) => {
-        let lastError: any;
-        
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const result = await fn();
-                resolve(result);
-                return;
-            } catch (error) {
-                lastError = error;
-                
-                if (i < maxRetries - 1) {
-                    const delay = baseDelayMs * Math.pow(2, i);
-                    console.log(`Retry attempt ${i + 1} after ${delay}ms`);
-                    await sleep(delay);
-                }
+    let lastError: any;
+    
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const result = await fn();
+            return result;
+        } catch (error) {
+            lastError = error;
+            
+            if (i < maxRetries - 1) {
+                const delay = baseDelayMs * Math.pow(2, i);
+                console.debug(`Retry attempt ${i + 1} after ${delay}ms`);
+                await sleep(delay);
             }
         }
-        
-        reject(lastError);
-    });
+    }
+    
+    throw lastError;
 }
 
 // ============= Async Utilities =============

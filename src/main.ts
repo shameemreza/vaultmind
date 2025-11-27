@@ -1,5 +1,5 @@
 import { Plugin, Notice, WorkspaceLeaf, Menu } from "obsidian";
-import { VaultMindSettings, DEFAULT_SETTINGS } from "./types";
+import { VaultMindSettings, DEFAULT_SETTINGS, AIProvider } from "./types";
 import { VaultIndexer } from "./core/VaultIndexer";
 import { TaskEngine } from "./core/TaskEngine";
 import { GoalEngine } from "./core/GoalEngine";
@@ -21,8 +21,8 @@ export default class VaultMindPlugin extends Plugin {
 	timeTracker: TimeTracker;
 	notificationService: NotificationService;
 	scheduler: Scheduler;
-	ai: any = null; // AI provider instance
-	aiProvider: any = null; // AI provider for chat
+	ai: AIProvider | null = null; // AI provider instance
+	aiProvider: AIProvider | null = null; // AI provider for chat
 	aiManager: AIManager | null = null; // AI Manager for hot-swappable providers
 
 	// UI elements
@@ -143,8 +143,8 @@ export default class VaultMindPlugin extends Plugin {
 			this.statusBarItem.remove();
 		}
 
-		// Detach all views
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DASHBOARD);
+		// Note: We don't detach leaves to preserve their position
+		// when the plugin is reloaded/updated
 
 		// Plugin unloaded
 	}
@@ -264,13 +264,7 @@ export default class VaultMindPlugin extends Plugin {
 			name: "Open AI Chat",
 			callback: async () => {
 				await this.openChat();
-			},
-			hotkeys: [
-				{
-					modifiers: ["Mod", "Shift"],
-					key: "c",
-				},
-			],
+			}
 		});
 
 		this.addCommand({
@@ -613,8 +607,8 @@ export default class VaultMindPlugin extends Plugin {
 					new Notice("✓ Claude connected");
 				} else if (provider === "ollama") {
 					new Notice("✓ Ollama connected");
-				} else if (provider === "local") {
-					new Notice("✓ Local AI ready");
+				} else if (provider) {
+					new Notice("✓ AI provider connected");
 				}
 			} else if (this.settings.aiProvider !== "none") {
 				new Notice("AI provider not configured");

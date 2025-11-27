@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, CachedMetadata, Notice } from 'obsidian';
+import { App, TFile, TFolder, CachedMetadata } from 'obsidian';
 import { 
     VaultIndex, 
     IndexedNote, 
@@ -33,7 +33,7 @@ export class VaultIndexer implements IVaultIndexer {
 
     async initialize(app: App): Promise<void> {
         this.app = app;
-        await this.storage.initialize();
+        this.storage.initialize(app);
         
         // Load existing index from storage
         const storedIndex = await this.storage.get<VaultIndex>('vault-index');
@@ -52,7 +52,7 @@ export class VaultIndexer implements IVaultIndexer {
 
     async indexVault(): Promise<VaultIndex> {
         if (this.indexing) {
-            console.log('VaultMind: Indexing already in progress');
+            console.debug('VaultMind: Indexing already in progress');
             return this.index;
         }
 
@@ -60,7 +60,7 @@ export class VaultIndexer implements IVaultIndexer {
         const startTime = Date.now();
         
         try {
-            console.log('VaultMind: Starting vault indexing...');
+            console.debug('VaultMind: Starting vault indexing...');
             
             // Clear existing index
             this.index.notes.clear();
@@ -81,7 +81,7 @@ export class VaultIndexer implements IVaultIndexer {
                 
                 // Update progress
                 if (processedFiles % 50 === 0 || processedFiles === totalFiles) {
-                    console.log(`VaultMind: Indexed ${processedFiles}/${totalFiles} files`);
+                    console.debug(`VaultMind: Indexed ${processedFiles}/${totalFiles} files`);
                 }
             }
             
@@ -91,8 +91,8 @@ export class VaultIndexer implements IVaultIndexer {
             await this.saveIndex();
             
             const duration = Date.now() - startTime;
-            console.log(`VaultMind: Indexing completed in ${duration}ms`);
-            console.log(`VaultMind: Indexed ${this.index.notes.size} notes, ${this.index.tasks.size} tasks`);
+            console.debug(`VaultMind: Indexing completed in ${duration}ms`);
+            console.debug(`VaultMind: Indexed ${this.index.notes.size} notes, ${this.index.tasks.size} tasks`);
             
             return this.index;
         } catch (error) {
@@ -167,7 +167,7 @@ export class VaultIndexer implements IVaultIndexer {
     async updateIndex(file: TFile): Promise<void> {
         // Debounced update to avoid excessive re-indexing
         const debouncedUpdate = debounce(async () => {
-            console.log(`VaultMind: Updating index for ${file.path}`);
+            console.debug(`VaultMind: Updating index for ${file.path}`);
             
             // Remove old tasks from this file
             const oldNote = this.index.notes.get(file.path);
@@ -213,7 +213,7 @@ export class VaultIndexer implements IVaultIndexer {
             // Save updated index
             await this.saveIndex();
             
-            console.log(`VaultMind: Removed ${path} from index`);
+            console.debug(`VaultMind: Removed ${path} from index`);
         }
     }
 
@@ -321,7 +321,7 @@ export class VaultIndexer implements IVaultIndexer {
         const contentWithoutFrontmatter = content.replace(/^---[\s\S]*?---\n/, '');
         // Remove markdown syntax
         const plainText = contentWithoutFrontmatter
-            .replace(/[#*_~`\[\]()]/g, '')
+            .replace(/[#*_~`[\]()]/g, '')
             .replace(/!\[.*?\]\(.*?\)/g, '')
             .replace(/\[.*?\]\(.*?\)/g, '');
         

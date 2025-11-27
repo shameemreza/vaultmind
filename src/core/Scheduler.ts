@@ -14,7 +14,7 @@ export class Scheduler {
         if (this.running) return;
         this.running = true;
         
-        console.log('VaultMind: Scheduler started');
+        console.debug('VaultMind: Scheduler started');
         
         // Schedule vault indexing
         if (this.plugin.settings.enableAutoIndex) {
@@ -53,7 +53,7 @@ export class Scheduler {
         }
         this.intervals.clear();
         
-        console.log('VaultMind: Scheduler stopped');
+        console.debug('VaultMind: Scheduler stopped');
     }
 
     private scheduleDailyReport(): void {
@@ -86,7 +86,7 @@ export class Scheduler {
     }
 
     private async generateDailyReport(): Promise<void> {
-        console.log('VaultMind: Generating daily report...');
+        console.debug('VaultMind: Generating daily report...');
         
         const summary = await this.plugin.generateDailySummary();
         if (summary) {
@@ -112,7 +112,7 @@ export class Scheduler {
     }
 
     private async generateWeeklyReview(): Promise<void> {
-        console.log('VaultMind: Generating weekly review...');
+        console.debug('VaultMind: Generating weekly review...');
         
         // This would generate a comprehensive weekly review
         // For now, we'll use a simple implementation

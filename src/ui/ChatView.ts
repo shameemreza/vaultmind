@@ -163,7 +163,7 @@ export class ChatView extends ItemView {
         // Check if AI provider is initialized
         if (!this.plugin.aiProvider) {
             // Try to initialize AI provider
-            if (this.plugin.settings.aiProvider === 'local') {
+            if (this.plugin.settings.aiProvider !== 'none') {
                 await this.plugin.updateAIProvider();
             }
             

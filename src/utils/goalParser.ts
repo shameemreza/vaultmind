@@ -69,10 +69,11 @@ export function parseGoalsFromNote(
             // Look for progress indicator near this goal (within next 5 lines)
             const goalIndex = match.index;
             const nearbyContent = content.substring(goalIndex, goalIndex + 300);
-            const progressMatch = nearbyContent.match(/(?:Progress|progress):\s*(\d+)%?/i);
+            const progressMatch = nearbyContent.match(/(?:Progress|progress)[:\s]+(\d+)%?/i);
             if (progressMatch) {
-                goal.progress = parseInt(progressMatch[1]);
-                console.log(`VaultMind: Found progress ${progressMatch[1]}% for goal "${title}"`);
+                const progressValue = Math.min(100, Math.max(0, parseInt(progressMatch[1])));
+                goal.progress = progressValue;
+                console.debug(`VaultMind: Found progress ${progressValue}% for goal "${title}"`);
             }
             goals.push(goal);
         }
@@ -86,10 +87,11 @@ export function parseGoalsFromNote(
         // Look for progress indicator near this tag (within next 5 lines)
         const tagIndex = match.index;
         const nearbyContent = content.substring(tagIndex, tagIndex + 300);
-        const progressMatch = nearbyContent.match(/(?:Progress|progress):\s*(\d+)%?/i);
+        const progressMatch = nearbyContent.match(/(?:Progress|progress)[:\s]+(\d+)%?/i);
         if (progressMatch) {
-            goal.progress = parseInt(progressMatch[1]);
-            console.log(`VaultMind: Found progress ${progressMatch[1]}% for goal tag "${goalName}"`);
+            const progressValue = Math.min(100, Math.max(0, parseInt(progressMatch[1])));
+            goal.progress = progressValue;
+            console.debug(`VaultMind: Found progress ${progressValue}% for goal tag "${goalName}"`);
         }
         goals.push(goal);
     }
@@ -122,10 +124,11 @@ export function parseGoalsFromNote(
         }
         
         // Also check for standalone Progress lines like "- [ ] Progress: 30"
-        const progressLineMatch = nearbyContent.match(/- \[[ x]\]\s*(?:Progress|progress):\s*(\d+)%?/i);
+        const progressLineMatch = nearbyContent.match(/- \[[ x]\]\s*(?:Progress|progress)[:\s]+(\d+)%?/i);
         if (progressLineMatch && !goal.progress) {
-            goal.progress = parseInt(progressLineMatch[1]);
-            console.log(`VaultMind: Found progress from checkbox line ${progressLineMatch[1]}% for goal "${goal.title}"`);
+            const progressValue = Math.min(100, Math.max(0, parseInt(progressLineMatch[1])));
+            goal.progress = progressValue;
+            console.debug(`VaultMind: Found progress from checkbox line ${progressValue}% for goal "${goal.title}"`);
         }
     });
     

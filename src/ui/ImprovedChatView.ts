@@ -174,8 +174,8 @@ export class ChatView extends ItemView {
                        note.content?.toLowerCase().includes(searchLower);
             })
             .slice(0, 10)
-            .map(note => this.plugin.app.vault.getAbstractFileByPath(note.filePath || '') as TFile)
-            .filter(file => file instanceof TFile);
+            .map(note => this.plugin.app.vault.getAbstractFileByPath(note.filePath || ''))
+            .filter((file): file is TFile => file instanceof TFile);
         
         this.attachedNotes = relevantNotes;
         this.updateContextIndicator();
@@ -397,7 +397,10 @@ export class ChatView extends ItemView {
             const indicator = this.messagesEl.createEl('div', {
                 cls: 'vaultmind-chat-typing'
             });
-            indicator.innerHTML = '<span></span><span></span><span></span>';
+            // Create typing indicator dots
+            indicator.createEl('span');
+            indicator.createEl('span');
+            indicator.createEl('span');
         } else {
             this.sendBtn.textContent = 'Send';
             this.sendBtn.removeClass('processing');

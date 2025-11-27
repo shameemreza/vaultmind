@@ -15,7 +15,7 @@ export class TimeTracker implements ITimeTracker {
 
     async initialize(app: App): Promise<void> {
         this.app = app;
-        await this.storage.initialize();
+        this.storage.initialize(app);
         await this.loadEntries();
     }
 

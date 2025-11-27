@@ -14,7 +14,7 @@ export class FallbackAI implements AIProvider {
     type: 'local' | 'cloud' | 'external' = 'local';
 
     async initialize(): Promise<void> {
-        console.log('VaultMind: Using fallback AI (no ML models)');
+        console.debug('VaultMind: Using fallback AI (no ML models)');
     }
 
     async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
@@ -33,18 +33,20 @@ export class FallbackAI implements AIProvider {
                 // Return first 2-3 sentences
                 return sentences.slice(0, 3).join(' ').substring(0, maxLength);
                 
-            case 'bullet-points':
+            case 'bullet-points': {
                 // Extract key sentences as bullet points
                 const bullets = sentences
                     .slice(0, 5)
                     .map(s => `• ${s.trim()}`)
                     .join('\n');
                 return bullets.substring(0, maxLength * 2);
+            }
                 
-            case 'detailed':
+            case 'detailed': {
                 // Return first paragraph
                 const paragraphs = content.split('\n\n');
                 return paragraphs[0].substring(0, maxLength * 2);
+            }
                 
             default:
                 return sentences[0]?.substring(0, maxLength) || content.substring(0, maxLength);

@@ -160,7 +160,7 @@ export interface VaultMindSettings {
     breakLength: number; // minutes
     
     // AI Settings
-    aiProvider: 'local' | 'ollama' | 'openai' | 'anthropic' | 'none';
+    aiProvider: 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'grok' | 'none';
     localModelName: string;
     embeddingModel?: string;
     localModelPath?: string;
@@ -174,6 +174,18 @@ export interface VaultMindSettings {
     claudeModel?: string;
     ollamaEndpoint?: string;
     ollamaModel?: string;
+    
+    // Gemini Settings
+    geminiApiKey?: string;
+    geminiModel?: string;
+    
+    // DeepSeek Settings
+    deepseekApiKey?: string;
+    deepseekModel?: string;
+    
+    // Grok Settings
+    grokApiKey?: string;
+    grokModel?: string;
     
     maxTokens: number;
     temperature: number;

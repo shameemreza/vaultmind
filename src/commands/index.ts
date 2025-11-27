@@ -1,4 +1,4 @@
-import { Notice } from 'obsidian';
+import { Notice, TFile } from 'obsidian';
 import VaultMindPlugin from '../main';
 
 export function registerCommands(plugin: VaultMindPlugin): void {
@@ -133,40 +133,35 @@ export function registerCommands(plugin: VaultMindPlugin): void {
         }
     });
     
-    // Download AI model
-    plugin.addCommand({
-        id: 'download-model',
-        name: 'Download AI Model',
-        callback: async () => {
-            // Show model selection modal
-            const { ModelSelectionModal } = await import('../ui/DownloadModal');
-            const modal = new ModelSelectionModal(
-                plugin.app,
-                async (modelId: string) => {
-                    if (plugin.ai && 'downloadModel' in plugin.ai) {
-                        try {
-                            await (plugin.ai as any).downloadModel(modelId, plugin.app);
-                        } catch (error) {
-                            console.error('Model download failed:', error);
-                            new Notice('Model download failed: ' + (error as any).message);
-                        }
-                    } else {
-                        new Notice('AI provider does not support model downloads');
-                    }
-                }
-            );
-            modal.open();
-        }
-    });
+    // Model download commands removed - using cloud providers only
     
-    // Manage models
+    // Test Ollama connection
     plugin.addCommand({
-        id: 'manage-models',
-        name: 'Manage AI Models',
+        id: 'test-ollama',
+        name: 'Test Ollama connection',
         callback: async () => {
-            const { ModelManagementModal } = await import('../ui/DownloadModal');
-            const modal = new ModelManagementModal(plugin.app, plugin);
-            modal.open();
+            if (plugin.settings.aiProvider !== 'ollama') {
+                new Notice('Please set AI provider to Ollama in settings first');
+                return;
+            }
+            
+            try {
+                new Notice('Testing Ollama...');
+                
+                // Test with a simple prompt
+                const testPrompt = 'Say "Hello from Ollama" if you can see this message.';
+                const response = await plugin.aiProvider?.answerQuestion(testPrompt, '');
+                
+                if (response) {
+                    new Notice(`Ollama responded: ${response.substring(0, 100)}`);
+                    console.debug('VaultMind: Ollama test response:', response);
+                } else {
+                    new Notice('No response from Ollama');
+                }
+            } catch (error) {
+                console.error('VaultMind: Ollama test failed:', error);
+                new Notice(`Ollama test failed: ${(error as Error).message}`);
+            }
         }
     });
     
@@ -250,8 +245,8 @@ export function registerCommands(plugin: VaultMindPlugin): void {
                 const fileName = `Daily Summary - ${new Date().toISOString().split('T')[0]}.md`;
                 const existingFile = plugin.app.vault.getAbstractFileByPath(fileName);
                 
-                if (existingFile) {
-                    await plugin.app.vault.modify(existingFile as any, summary);
+                if (existingFile instanceof TFile) {
+                    await plugin.app.vault.modify(existingFile, summary);
                 } else {
                     await plugin.app.vault.create(fileName, summary);
                 }
@@ -259,8 +254,8 @@ export function registerCommands(plugin: VaultMindPlugin): void {
                 new Notice('Daily summary generated!');
                 // Open the file
                 const file = plugin.app.vault.getAbstractFileByPath(fileName);
-                if (file) {
-                    await plugin.app.workspace.getLeaf().openFile(file as any);
+                if (file instanceof TFile) {
+                    await plugin.app.workspace.getLeaf().openFile(file);
                 }
             } else {
                 new Notice('Failed to generate daily summary');
@@ -308,8 +303,8 @@ ${plugin.timeTracker.getEntries().slice(-5).map((e: any) =>
             new Notice('Weekly review generated!');
             // Open the file
             const file = plugin.app.vault.getAbstractFileByPath(fileName);
-            if (file) {
-                await plugin.app.workspace.getLeaf().openFile(file as any);
+            if (file instanceof TFile) {
+                await plugin.app.workspace.getLeaf().openFile(file);
             }
         }
     });

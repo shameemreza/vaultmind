@@ -13,7 +13,7 @@ VaultMind is a comprehensive Obsidian plugin that brings AI-powered task managem
 ### AI-Powered Assistant
 
 -   **Full Vault Access**: AI can search and analyze all your notes.
--   **Multi-Provider Support**: OpenAI, Claude, Ollama, or local fallback.
+-   **Multi-Provider Support**: OpenAI, Claude (Anthropic), Ollama, Google Gemini, DeepSeek, Grok (X.AI).
 -   **Natural Language**: Ask questions naturally - What tasks are due today?
 -   **Smart Context**: Understands your tasks, goals, and note relationships.
 -   **Session Management**: Persistent chat history across sessions.

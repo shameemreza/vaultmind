@@ -28,7 +28,7 @@ export class GoalEngine implements IGoalEngine {
             this.goals.set(goal.id, goal);
         }
         
-        console.log(`VaultMind: Found ${this.goals.size} goals`);
+        console.debug(`VaultMind: Found ${this.goals.size} goals`);
         return Array.from(this.goals.values());
     }
 

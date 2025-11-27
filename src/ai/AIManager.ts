@@ -1,4 +1,4 @@
-import { App, Notice, requestUrl } from 'obsidian';
+import { App, requestUrl } from 'obsidian';
 import { 
     AIProvider, 
     VaultMindSettings,
@@ -84,26 +84,53 @@ export class AIManager {
         let provider: AIProvider | null = null;
         
         switch (aiProvider) {
-            case 'openai':
+            case 'openai': {
                 if (this.settings.openAIApiKey) {
                     provider = new OpenAIProvider(this.settings);
                 }
                 break;
+            }
                 
-            case 'anthropic':
+            case 'anthropic': {
                 if (this.settings.claudeApiKey) {
                     provider = new AnthropicProvider(this.settings);
                 }
                 break;
+            }
                 
-            case 'ollama':
+            case 'ollama': {
                 provider = new OllamaProvider(this.settings);
                 break;
-                
-            case 'local':
-            default:
-                provider = new LocalProvider(this.settings, this.embeddings);
+            }
+            
+            case 'gemini': {
+                if (this.settings.geminiApiKey) {
+                    const { GeminiAI } = await import('./GeminiAI');
+                    provider = new GeminiAI(this.settings);
+                }
                 break;
+            }
+            
+            case 'deepseek': {
+                if (this.settings.deepseekApiKey) {
+                    const { DeepSeekAI } = await import('./DeepSeekAI');
+                    provider = new DeepSeekAI(this.settings);
+                }
+                break;
+            }
+            
+            case 'grok': {
+                if (this.settings.grokApiKey) {
+                    const { GrokAI } = await import('./GrokAI');
+                    provider = new GrokAI(this.settings);
+                }
+                break;
+            }
+                
+            default: {
+                // No provider for unknown types
+                return null;
+            }
         }
         
         if (provider) {
@@ -112,12 +139,8 @@ export class AIManager {
                 return provider;
             } catch (error) {
                 console.error(`Failed to initialize ${aiProvider} provider:`, error);
-                // Fall back to local provider
-                if (aiProvider !== 'local') {
-                    provider = new LocalProvider(this.settings, this.embeddings);
-                    await provider.initialize();
-                    return provider;
-                }
+                // No fallback - just return null if provider fails
+                return null;
             }
         }
         
@@ -135,7 +158,7 @@ export class AIManager {
     /**
      * Update settings and hot-swap provider if needed
      */
-    async updateSettings(settings: VaultMindSettings) {
+    updateSettings(settings: VaultMindSettings) {
         const oldKey = this.getProviderKey();
         this.settings = settings;
         const newKey = this.getProviderKey();
@@ -375,7 +398,7 @@ class OllamaProvider implements AIProvider {
     }
     
     async initialize(): Promise<void> {
-        // Check if Ollama is running
+        // Check if Ollama is running and model exists
         const response = await requestUrl({
             url: `${this.endpoint}/api/tags`,
             method: 'GET'
@@ -383,6 +406,18 @@ class OllamaProvider implements AIProvider {
         
         if (response.status !== 200) {
             throw new Error('Ollama not running or unreachable');
+        }
+        
+        // Check if specified model exists
+        const modelName = this.settings.ollamaModel || 'qwen3-vl:8b';
+        const models = response.json.models || [];
+        const modelExists = models.some((m: any) => m.name === modelName);
+        
+        if (!modelExists && models.length > 0) {
+            console.debug(`VaultMind: Model ${modelName} not found. Available models:`, models.map((m: any) => m.name));
+            // Use first available model as fallback
+            this.settings.ollamaModel = models[0].name;
+            console.debug(`VaultMind: Using fallback model: ${this.settings.ollamaModel}`);
         }
     }
     
@@ -399,16 +434,77 @@ class OllamaProvider implements AIProvider {
     }
     
     async generateSuggestions(context: AIContext): Promise<string[]> {
-        const response = await this.callOllama(
-            `Give 5 brief suggestions based on:\nTasks: ${context.tasks?.length || 0}\nGoals: ${context.goals?.length || 0}`
-        );
+        // Build comprehensive context from vault
+        let contextPrompt = 'Based on the following vault data, provide 5 actionable suggestions:\n\n';
+        
+        if (context.tasks && context.tasks.length > 0) {
+            const pendingTasks = context.tasks.filter(t => !t.completed).slice(0, 10);
+            contextPrompt += `Pending Tasks (${context.tasks.filter(t => !t.completed).length} total):\n`;
+            pendingTasks.forEach(t => {
+                contextPrompt += `- ${t.content}${t.dueDate ? ` (due: ${t.dueDate})` : ''}\n`;
+            });
+            contextPrompt += '\n';
+        }
+        
+        if (context.goals && context.goals.length > 0) {
+            contextPrompt += `Active Goals:\n`;
+            context.goals.slice(0, 5).forEach(g => {
+                contextPrompt += `- ${g.title} (${g.progress}% complete)\n`;
+            });
+            contextPrompt += '\n';
+        }
+        
+        if (context.recentNotes && context.recentNotes.length > 0) {
+            contextPrompt += `Recent Notes: ${context.recentNotes.slice(0, 5).map(n => n.title).join(', ')}\n\n`;
+        }
+        
+        contextPrompt += 'Provide 5 brief, actionable suggestions to help with productivity and organization.';
+        
+        const response = await this.callOllama(contextPrompt);
         return response.split('\n').filter(s => s.trim()).slice(0, 5);
     }
     
     async generateDailySummary(context: AIContext): Promise<string> {
-        return this.callOllama(
-            `Create a daily summary in markdown for:\nTasks: ${context.tasks?.filter(t => t.completed).length}/${context.tasks?.length}\nGoals: ${context.goals?.length}`
-        );
+        // Build comprehensive daily summary context
+        let summaryPrompt = 'Create a daily summary in markdown format based on the following vault data:\n\n';
+        
+        if (context.tasks && context.tasks.length > 0) {
+            const completedToday = context.tasks.filter(t => t.completed);
+            const pending = context.tasks.filter(t => !t.completed);
+            
+            summaryPrompt += `## Tasks\n`;
+            summaryPrompt += `- Completed: ${completedToday.length}\n`;
+            summaryPrompt += `- Pending: ${pending.length}\n\n`;
+            
+            if (completedToday.length > 0) {
+                summaryPrompt += `### Completed Today:\n`;
+                completedToday.slice(0, 5).forEach(t => {
+                    summaryPrompt += `- ${t.content}\n`;
+                });
+                summaryPrompt += '\n';
+            }
+            
+            const urgent = pending.filter(t => t.priority === 'high');
+            if (urgent.length > 0) {
+                summaryPrompt += `### Urgent Pending:\n`;
+                urgent.slice(0, 5).forEach(t => {
+                    summaryPrompt += `- ${t.content}\n`;
+                });
+                summaryPrompt += '\n';
+            }
+        }
+        
+        if (context.goals && context.goals.length > 0) {
+            summaryPrompt += `## Goals Progress:\n`;
+            context.goals.slice(0, 3).forEach(g => {
+                summaryPrompt += `- ${g.title}: ${g.progress}%\n`;
+            });
+            summaryPrompt += '\n';
+        }
+        
+        summaryPrompt += 'Generate a concise, motivational daily summary with key insights and next steps.';
+        
+        return this.callOllama(summaryPrompt);
     }
     
     async generateEmbedding(text: string): Promise<Float32Array> {
@@ -419,7 +515,7 @@ class OllamaProvider implements AIProvider {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: this.settings.ollamaModel || 'llama2',
+                model: this.settings.ollamaModel || 'qwen3-vl:8b',
                 prompt: text
             })
         });
@@ -441,7 +537,7 @@ class OllamaProvider implements AIProvider {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: this.settings.ollamaModel || 'llama2',
+                model: this.settings.ollamaModel || 'qwen3-vl:8b',
                 prompt: prompt,
                 stream: false
             })
@@ -455,95 +551,4 @@ class OllamaProvider implements AIProvider {
     }
 }
 
-/**
- * Local Provider - Simple, fast, privacy-first
- */
-class LocalProvider implements AIProvider {
-    name = 'Local';
-    type: 'local' | 'cloud' | 'external' = 'local';
-    private settings: VaultMindSettings;
-    private embeddings: SimpleEmbeddings;
-    
-    constructor(settings: VaultMindSettings, embeddings: SimpleEmbeddings) {
-        this.settings = settings;
-        this.embeddings = embeddings;
-    }
-    
-    async initialize(): Promise<void> {
-        // Nothing to initialize
-    }
-    
-    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
-        const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
-        const maxLength = options?.maxLength || 150;
-        
-        if (sentences.length === 0) {
-            return content.substring(0, maxLength);
-        }
-        
-        return sentences.slice(0, 3).join(' ').substring(0, maxLength);
-    }
-    
-    async answerQuestion(question: string, context: string): Promise<string> {
-        // Simple keyword matching
-        const keywords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-        const sentences = context.match(/[^.!?]+[.!?]+/g) || [];
-        
-        const relevant = sentences.find(s => 
-            keywords.some(k => s.toLowerCase().includes(k))
-        );
-        
-        return relevant ? relevant.trim() : 'Please check your notes for more information.';
-    }
-    
-    async generateSuggestions(context: AIContext): Promise<string[]> {
-        const suggestions: string[] = [];
-        
-        if (context.tasks) {
-            const overdue = context.tasks.filter(t => 
-                t.dueDate && new Date(t.dueDate) < new Date() && !t.completed
-            ).length;
-            
-            if (overdue > 0) {
-                suggestions.push(`Focus on ${overdue} overdue tasks`);
-            }
-        }
-        
-        if (context.goals) {
-            const lowProgress = context.goals.filter(g => g.progress < 30).length;
-            if (lowProgress > 0) {
-                suggestions.push(`Work on ${lowProgress} goals needing attention`);
-            }
-        }
-        
-        if (suggestions.length === 0) {
-            suggestions.push('Review your tasks and goals');
-        }
-        
-        return suggestions;
-    }
-    
-    async generateDailySummary(context: AIContext): Promise<string> {
-        const completed = context.tasks?.filter(t => t.completed).length || 0;
-        const total = context.tasks?.length || 0;
-        
-        return `# Daily Summary
-
-## Tasks
-- Completed: ${completed}/${total}
-- Progress: ${total > 0 ? Math.round((completed / total) * 100) : 0}%
-
-## Next Steps
-- Review pending tasks
-- Update goal progress
-- Plan tomorrow's priorities`;
-    }
-    
-    async generateEmbedding(text: string): Promise<Float32Array> {
-        return this.embeddings.generateEmbedding(text);
-    }
-    
-    async cleanup(): Promise<void> {
-        // Nothing to clean up
-    }
-}
+// Local Provider removed - we only support cloud AI providers now
