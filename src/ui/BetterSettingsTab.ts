@@ -14,7 +14,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Header
-		containerEl.createEl("h2", { text: "VaultMind Settings" });
+		new Setting(containerEl).setName("VaultMind settings").setHeading();
 
 		// General Settings
 		this.createGeneralSettings(containerEl);
@@ -33,7 +33,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createGeneralSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h3", { text: "General" });
+		new Setting(containerEl).setName("General").setHeading();
 
 		new Setting(containerEl)
 			.setName("Auto-index vault")
@@ -77,11 +77,11 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createAISettings(containerEl: HTMLElement) {
-		containerEl.createEl("h3", { text: "AI Configuration" });
+		new Setting(containerEl).setName("AI configuration").setHeading();
 
 		// AI Provider dropdown
 		new Setting(containerEl)
-			.setName("AI Provider")
+			.setName("AI provider")
 			.setDesc("Choose your AI provider (no restart required)")
 			.addDropdown((dropdown) =>
 				dropdown
@@ -94,7 +94,14 @@ export class BetterSettingsTab extends PluginSettingTab {
 					.addOption("none", "Disabled")
 					.setValue(this.plugin.settings.aiProvider)
 					.onChange(async (value) => {
-						this.plugin.settings.aiProvider = value as any;
+						this.plugin.settings.aiProvider = value as
+							| "openai"
+							| "anthropic"
+							| "ollama"
+							| "gemini"
+							| "deepseek"
+							| "grok"
+							| "none";
 						await this.plugin.saveSettings();
 
 						// Hot-swap provider without restart
@@ -107,15 +114,15 @@ export class BetterSettingsTab extends PluginSettingTab {
 
 		// Test connection button
 		new Setting(containerEl)
-			.setName("Test AI Connection")
+			.setName("Test AI connection")
 			.setDesc("Verify your AI provider is working")
 			.addButton((button) =>
 				button
-					.setButtonText("Test Connection")
+					.setButtonText("Test connection")
 					.setCta()
 					.onClick(async () => {
 						button.setDisabled(true);
-						button.setButtonText("Testing...");
+						button.setButtonText("Testing…");
 
 						const success = await this.plugin.testAIConnection();
 
@@ -123,7 +130,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 							success ? "✓ Connected" : "✗ Failed"
 						);
 						setTimeout(() => {
-							button.setButtonText("Test Connection");
+							button.setButtonText("Test connection");
 							button.setDisabled(false);
 						}, 2000);
 					})
@@ -145,97 +152,13 @@ export class BetterSettingsTab extends PluginSettingTab {
 		} else if (provider === "grok") {
 			this.createGrokSettings(containerEl);
 		}
-
-		// Web Search Settings
-		containerEl.createEl("h4", { text: "Web Search" });
-
-		new Setting(containerEl)
-			.setName("Enable web search")
-			.setDesc("Allow AI to search the web for additional context")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableWebSearch)
-					.onChange(async (value) => {
-						this.plugin.settings.enableWebSearch = value;
-						await this.plugin.saveSettings();
-						this.display(); // Refresh to show/hide search provider settings
-					})
-			);
-
-		if (this.plugin.settings.enableWebSearch) {
-			new Setting(containerEl)
-				.setName("Search provider")
-				.setDesc("Choose your web search provider")
-				.addDropdown((dropdown) =>
-					dropdown
-						.addOption("duckduckgo", "DuckDuckGo (No API key)")
-						.addOption("brave", "Brave Search")
-						.addOption("custom", "Custom")
-						.setValue(this.plugin.settings.webSearchProvider)
-						.onChange(async (value) => {
-							this.plugin.settings.webSearchProvider =
-								value as any;
-							await this.plugin.saveSettings();
-							this.display(); // Refresh to show/hide API key field
-						})
-				);
-
-			if (this.plugin.settings.webSearchProvider === "brave") {
-				new Setting(containerEl)
-					.setName("Brave API Key")
-					.setDesc("Get from brave.com/search/api")
-					.addText((text) =>
-						text
-							.setPlaceholder("Enter API key")
-							.setValue(this.plugin.settings.apiKey || "")
-							.onChange(async (value) => {
-								this.plugin.settings.apiKey = value;
-								await this.plugin.saveSettings();
-							})
-					)
-					.addExtraButton((button) =>
-						button
-							.setIcon("eye")
-							.setTooltip("Show/hide API key")
-							.onClick(() => {
-								const input = containerEl.querySelector(
-									".brave-api-key-input"
-								) as HTMLInputElement;
-								if (input) {
-									input.type =
-										input.type === "password"
-											? "text"
-											: "password";
-								}
-							})
-					);
-			}
-
-			if (this.plugin.settings.webSearchProvider === "custom") {
-				new Setting(containerEl)
-					.setName("Custom Search Endpoint")
-					.setDesc("API endpoint for custom search provider")
-					.addText((text) =>
-						text
-							.setPlaceholder("https://api.example.com/search")
-							.setValue(
-								this.plugin.settings.customSearchEndpoint || ""
-							)
-							.onChange(async (value) => {
-								this.plugin.settings.customSearchEndpoint =
-									value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
-		}
 	}
 
 	private createOpenAISettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "OpenAI Settings" });
+		new Setting(containerEl).setName("OpenAI settings").setHeading();
 
 		new Setting(containerEl)
-			.setName("OpenAI API Key")
+			.setName("OpenAI API key")
 			.setDesc("Get from platform.openai.com/api-keys")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -267,38 +190,32 @@ export class BetterSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Model")
-			.setDesc("Choose GPT model (3.5 is cheaper, 4 is smarter)")
+			.setDesc("Choose GPT model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("gpt-3.5-turbo", "GPT-3.5 Turbo (Fast & Cheap)")
-					.addOption("gpt-3.5-turbo-16k", "GPT-3.5 Turbo 16K")
-					.addOption("gpt-4", "GPT-4")
-					.addOption("gpt-4-32k", "GPT-4 32K")
-					.addOption("gpt-4-turbo", "GPT-4 Turbo")
-					.addOption("gpt-4o", "GPT-4o (Optimized)")
-					.addOption("gpt-4o-mini", "GPT-4o Mini (Cheap)")
-					.setValue(
-						this.plugin.settings.openAIModel || "gpt-3.5-turbo"
-					)
+					.addOption("gpt-5.1", "GPT-5.1")
+					.addOption("gpt-5", "GPT-5")
+					.addOption("gpt-5-mini", "GPT-5 Mini")
+					.addOption("gpt-5-nano", "GPT-5 Nano")
+					.addOption("gpt-4.1", "GPT-4.1")
+					.addOption("gpt-4o", "GPT-4o")
+					.addOption("gpt-4o-mini", "GPT-4o Mini")
+					.addOption("o1", "o1")
+					.addOption("o1-mini", "o1 Mini")
+					.setValue(this.plugin.settings.openAIModel || "gpt-4o-mini")
 					.onChange(async (value) => {
 						this.plugin.settings.openAIModel = value;
 						await this.plugin.saveSettings();
 						await this.plugin.updateAIProvider();
 					})
 			);
-
-		// Cost estimate
-		containerEl.createDiv({
-			cls: "setting-item-description",
-			text: "💡 Estimated cost: ~$0.10/day for typical use with GPT-3.5",
-		});
 	}
 
 	private createClaudeSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "Claude Settings" });
+		new Setting(containerEl).setName("Claude settings").setHeading();
 
 		new Setting(containerEl)
-			.setName("Claude API Key")
+			.setName("Claude API key")
 			.setDesc("Get from console.anthropic.com")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -332,27 +249,12 @@ export class BetterSettingsTab extends PluginSettingTab {
 			.setDesc("Choose Claude model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption(
-						"claude-3-haiku-20240307",
-						"Claude 3 Haiku (Fast & Cheap)"
-					)
-					.addOption(
-						"claude-3-sonnet-20240229",
-						"Claude 3 Sonnet (Balanced)"
-					)
-					.addOption(
-						"claude-3-opus-20240229",
-						"Claude 3 Opus (Most Capable)"
-					)
-					.addOption(
-						"claude-3-5-sonnet-20241022",
-						"Claude 3.5 Sonnet (Latest)"
-					)
-					.addOption("claude-2.1", "Claude 2.1 (Legacy)")
-					.addOption("claude-instant-1.2", "Claude Instant (Fastest)")
+					.addOption("claude-sonnet-4-5", "Claude Sonnet 4.5")
+					.addOption("claude-haiku-4-5", "Claude Haiku 4.5")
+					.addOption("claude-opus-4-5", "Claude Opus 4.5")
+					.addOption("claude-opus-4-1", "Claude Opus 4.1")
 					.setValue(
-						this.plugin.settings.claudeModel ||
-							"claude-3-haiku-20240307"
+						this.plugin.settings.claudeModel || "claude-haiku-4-5"
 					)
 					.onChange(async (value) => {
 						this.plugin.settings.claudeModel = value;
@@ -360,18 +262,13 @@ export class BetterSettingsTab extends PluginSettingTab {
 						await this.plugin.updateAIProvider();
 					})
 			);
-
-		containerEl.createDiv({
-			cls: "setting-item-description",
-			text: "💡 Haiku is recommended for most use cases",
-		});
 	}
 
 	private createOllamaSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "Ollama Settings" });
+		new Setting(containerEl).setName("Ollama settings").setHeading();
 
 		new Setting(containerEl)
-			.setName("Ollama Endpoint")
+			.setName("Ollama endpoint")
 			.setDesc("URL where Ollama is running")
 			.addText((text) =>
 				text
@@ -409,11 +306,11 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createTaskSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h3", { text: "Task Management" });
+		new Setting(containerEl).setName("Task management").setHeading();
 
 		new Setting(containerEl)
-			.setName("Task syntax")
-			.setDesc("Which task syntax to recognize")
+			.setName("Task format")
+			.setDesc("Which task format to recognize")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("obsidian", "Obsidian (- [ ])")
@@ -421,7 +318,10 @@ export class BetterSettingsTab extends PluginSettingTab {
 					.addOption("both", "Both")
 					.setValue(this.plugin.settings.taskSyntax)
 					.onChange(async (value) => {
-						this.plugin.settings.taskSyntax = value as any;
+						this.plugin.settings.taskSyntax = value as
+							| "obsidian"
+							| "tasks-plugin"
+							| "both";
 						await this.plugin.saveSettings();
 						// Re-index to pick up new tasks
 						await this.plugin.indexVault();
@@ -429,7 +329,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Enable task reminders")
+			.setName("Task reminders")
 			.setDesc("Show reminders for upcoming tasks")
 			.addToggle((toggle) =>
 				toggle
@@ -443,7 +343,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 		if (this.plugin.settings.enableTaskReminders) {
 			new Setting(containerEl)
 				.setName("Reminder advance time")
-				.setDesc("Minutes before due time to show reminder")
+				.setDesc("Minutes before due time to show a reminder")
 				.addText((text) =>
 					text
 						.setPlaceholder("15")
@@ -462,11 +362,11 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createDashboardSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h3", { text: "Dashboard" });
+		new Setting(containerEl).setName("Dashboard").setHeading();
 
 		new Setting(containerEl)
-			.setName("Show tags section")
-			.setDesc("Display tags in the dashboard")
+			.setName("Show tags")
+			.setDesc("Display tags section in the dashboard")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showTagsInDashboard)
@@ -478,8 +378,8 @@ export class BetterSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show time tracking")
-			.setDesc("Display time tracking section")
+			.setName("Time tracking")
+			.setDesc("Display time tracking section in the dashboard")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showTimeTrackingInDashboard)
@@ -492,8 +392,8 @@ export class BetterSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show goals")
-			.setDesc("Display goals section")
+			.setName("Goals")
+			.setDesc("Display goals section in the dashboard")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showGoalsInDashboard)
@@ -506,7 +406,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Max tasks per section")
-			.setDesc("Maximum number of tasks to show in each section")
+			.setDesc("Maximum tasks to show in each section")
 			.addText((text) =>
 				text
 					.setPlaceholder("10")
@@ -523,7 +423,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createAdvancedSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h3", { text: "Advanced" });
+		new Setting(containerEl).setName("Advanced").setHeading();
 
 		new Setting(containerEl)
 			.setName("Max tokens")
@@ -599,10 +499,10 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createGeminiSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "Google Gemini Settings" });
+		new Setting(containerEl).setName("Google Gemini settings").setHeading();
 
 		new Setting(containerEl)
-			.setName("Gemini API Key")
+			.setName("Gemini API key")
 			.setDesc("Get from makersuite.google.com/app/apikey")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -621,28 +521,27 @@ export class BetterSettingsTab extends PluginSettingTab {
 			.setDesc("Gemini model to use")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("gemini-pro", "Gemini Pro")
+					.addOption("gemini-3-pro", "Gemini 3 Pro")
+					.addOption("gemini-2.5-pro", "Gemini 2.5 Pro")
+					.addOption("gemini-2.0-flash", "Gemini 2.0 Flash")
 					.addOption("gemini-1.5-pro", "Gemini 1.5 Pro")
-					.addOption("gemini-1.5-flash", "Gemini 1.5 Flash (Fast)")
-					.setValue(this.plugin.settings.geminiModel || "gemini-pro")
+					.addOption("gemini-1.5-flash", "Gemini 1.5 Flash")
+					.setValue(
+						this.plugin.settings.geminiModel || "gemini-2.5-pro"
+					)
 					.onChange(async (value) => {
 						this.plugin.settings.geminiModel = value;
 						await this.plugin.saveSettings();
 						await this.plugin.updateAIProvider();
 					})
 			);
-
-		containerEl.createDiv({
-			cls: "setting-item-description",
-			text: "💡 Gemini Pro is recommended for most use cases",
-		});
 	}
 
 	private createDeepSeekSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "DeepSeek Settings" });
+		new Setting(containerEl).setName("DeepSeek settings").setHeading();
 
 		new Setting(containerEl)
-			.setName("DeepSeek API Key")
+			.setName("DeepSeek API key")
 			.setDesc("Get from platform.deepseek.com")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -659,9 +558,11 @@ export class BetterSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Model")
 			.setDesc("DeepSeek model to use")
-			.addText((text) =>
-				text
-					.setPlaceholder("deepseek-chat")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("deepseek-chat", "DeepSeek Chat")
+					.addOption("deepseek-coder", "DeepSeek Coder")
+					.addOption("deepseek-reasoner", "DeepSeek Reasoner")
 					.setValue(
 						this.plugin.settings.deepseekModel || "deepseek-chat"
 					)
@@ -671,18 +572,13 @@ export class BetterSettingsTab extends PluginSettingTab {
 						await this.plugin.updateAIProvider();
 					})
 			);
-
-		containerEl.createDiv({
-			cls: "setting-item-description",
-			text: "💡 DeepSeek offers competitive performance at lower costs",
-		});
 	}
 
 	private createGrokSettings(containerEl: HTMLElement) {
-		containerEl.createEl("h4", { text: "Grok Settings (X.AI)" });
+		new Setting(containerEl).setName("Grok settings (X.AI)").setHeading();
 
 		new Setting(containerEl)
-			.setName("Grok API Key")
+			.setName("Grok API key")
 			.setDesc("Get from console.x.ai")
 			.addText((text) => {
 				text.inputEl.type = "password";
@@ -699,20 +595,17 @@ export class BetterSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Model")
 			.setDesc("Grok model to use")
-			.addText((text) =>
-				text
-					.setPlaceholder("grok-beta")
-					.setValue(this.plugin.settings.grokModel || "grok-beta")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("grok-3", "Grok 3")
+					.addOption("grok-3-mini", "Grok 3 Mini")
+					.addOption("grok-2", "Grok 2")
+					.setValue(this.plugin.settings.grokModel || "grok-3")
 					.onChange(async (value) => {
 						this.plugin.settings.grokModel = value;
 						await this.plugin.saveSettings();
 						await this.plugin.updateAIProvider();
 					})
 			);
-
-		containerEl.createDiv({
-			cls: "setting-item-description",
-			text: "💡 Grok provides responses with personality and humor",
-		});
 	}
 }

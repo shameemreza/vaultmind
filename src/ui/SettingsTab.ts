@@ -14,10 +14,10 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "VaultMind Settings" });
+		new Setting(containerEl).setName("VaultMind settings").setHeading();
 
 		// General Settings
-		containerEl.createEl("h3", { text: "General" });
+		new Setting(containerEl).setName("General").setHeading();
 
 		new Setting(containerEl)
 			.setName("Enable auto-indexing")
@@ -48,10 +48,10 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// AI Settings
-		containerEl.createEl("h3", { text: "AI Configuration" });
+		new Setting(containerEl).setName("AI configuration").setHeading();
 
 		new Setting(containerEl)
-			.setName("AI Provider")
+			.setName("AI provider")
 			.setDesc("Choose your AI provider")
 			.addDropdown((dropdown) =>
 				dropdown
@@ -64,86 +64,25 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("none", "Disabled")
 					.setValue(this.plugin.settings.aiProvider)
 					.onChange(async (value) => {
-						this.plugin.settings.aiProvider = value as "ollama" | "openai" | "anthropic" | "gemini" | "deepseek" | "grok" | "none";
+						this.plugin.settings.aiProvider = value as
+							| "ollama"
+							| "openai"
+							| "anthropic"
+							| "gemini"
+							| "deepseek"
+							| "grok"
+							| "none";
 						await this.plugin.saveSettings();
 						new Notice("Restart required for AI changes");
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Enable web search")
-			.setDesc("Allow AI to search the web for additional context")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableWebSearch)
-					.onChange(async (value) => {
-						this.plugin.settings.enableWebSearch = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		if (this.plugin.settings.enableWebSearch) {
-			new Setting(containerEl)
-				.setName("Web search provider")
-				.setDesc("Choose your web search provider")
-				.addDropdown((dropdown) =>
-					dropdown
-						.addOption("duckduckgo", "DuckDuckGo (No API key)")
-						.addOption("brave", "Brave Search (API key required)")
-						.addOption("custom", "Custom")
-						.setValue(this.plugin.settings.webSearchProvider)
-						.onChange(async (value) => {
-							this.plugin.settings.webSearchProvider = value as "duckduckgo" | "brave" | "custom";
-							await this.plugin.saveSettings();
-							// Refresh settings display to show/hide API key field
-							this.display();
-						})
-				);
-
-			// Show API key field for Brave or Custom search
-			if (
-				this.plugin.settings.webSearchProvider === "brave" ||
-				this.plugin.settings.webSearchProvider === "custom"
-			) {
-				new Setting(containerEl)
-					.setName("Search API Key")
-					.setDesc(
-						`API key for ${this.plugin.settings.webSearchProvider} search`
-					)
-					.addText((text) =>
-						text
-							.setPlaceholder("Enter API key...")
-							.setValue(this.plugin.settings.apiKey || "")
-							.onChange(async (value) => {
-								this.plugin.settings.apiKey = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
-
-			// Custom endpoint for custom provider
-			if (this.plugin.settings.webSearchProvider === "custom") {
-				new Setting(containerEl)
-					.setName("Custom Search Endpoint")
-					.setDesc("API endpoint for custom search provider")
-					.addText((text) =>
-						text
-							.setPlaceholder("https://api.example.com/search")
-							.setValue(this.plugin.settings.apiEndpoint || "")
-							.onChange(async (value) => {
-								this.plugin.settings.apiEndpoint = value;
-								await this.plugin.saveSettings();
-							})
-					);
-			}
-		}
-
 		// Task Settings
-		containerEl.createEl("h3", { text: "Task Management" });
+		new Setting(containerEl).setName("Task management").setHeading();
 
 		new Setting(containerEl)
-			.setName("Task syntax")
-			.setDesc("Which task syntax to recognize")
+			.setName("Task format")
+			.setDesc("Which task format to recognize")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("obsidian", "Obsidian checkbox")
@@ -151,13 +90,16 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("both", "Both")
 					.setValue(this.plugin.settings.taskSyntax)
 					.onChange(async (value) => {
-						this.plugin.settings.taskSyntax = value as "obsidian" | "tasks-plugin" | "both";
+						this.plugin.settings.taskSyntax = value as
+							| "obsidian"
+							| "tasks-plugin"
+							| "both";
 						await this.plugin.saveSettings();
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Enable task reminders")
+			.setName("Task reminders")
 			.setDesc("Show reminders for upcoming tasks")
 			.addToggle((toggle) =>
 				toggle
@@ -169,10 +111,10 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Reports Settings
-		containerEl.createEl("h3", { text: "Reports & Reviews" });
+		new Setting(containerEl).setName("Reports & reviews").setHeading();
 
 		new Setting(containerEl)
-			.setName("Enable daily report")
+			.setName("Daily report")
 			.setDesc("Automatically generate a daily summary")
 			.addToggle((toggle) =>
 				toggle
@@ -185,7 +127,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		if (this.plugin.settings.enableDailyReport) {
 			new Setting(containerEl)
-				.setName("Daily report time")
+				.setName("Report time")
 				.setDesc("When to generate the daily report (HH:MM)")
 				.addText((text) =>
 					text
@@ -199,7 +141,7 @@ export class SettingsTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("Enable weekly review")
+			.setName("Weekly review")
 			.setDesc("Automatically generate a weekly review")
 			.addToggle((toggle) =>
 				toggle
@@ -211,7 +153,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// UI Settings
-		containerEl.createEl("h3", { text: "User Interface" });
+		new Setting(containerEl).setName("User interface").setHeading();
 
 		new Setting(containerEl)
 			.setName("Show status bar")
@@ -239,20 +181,22 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Dashboard position")
-			.setDesc("Where to open the dashboard")
+			.setDesc("Where to open the dashboard view")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("left", "Left sidebar")
 					.addOption("right", "Right sidebar")
 					.setValue(this.plugin.settings.dashboardPosition)
 					.onChange(async (value) => {
-						this.plugin.settings.dashboardPosition = value as "left" | "right";
+						this.plugin.settings.dashboardPosition = value as
+							| "left"
+							| "right";
 						await this.plugin.saveSettings();
 					})
 			);
 
 		// Dashboard Display Settings
-		containerEl.createEl("h3", { text: "Dashboard Display" });
+		new Setting(containerEl).setName("Dashboard display").setHeading();
 
 		new Setting(containerEl)
 			.setName("Show tags")
@@ -318,10 +262,10 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Privacy Settings
-		containerEl.createEl("h3", { text: "Privacy" });
+		new Setting(containerEl).setName("Privacy").setHeading();
 
 		new Setting(containerEl)
-			.setName("Enable cloud features")
+			.setName("Cloud features")
 			.setDesc(
 				"Allow optional cloud AI features (data will be sent externally)"
 			)
@@ -351,14 +295,14 @@ export class SettingsTab extends PluginSettingTab {
 			);
 
 		// Debug Settings
-		containerEl.createEl("h3", { text: "Debug" });
+		new Setting(containerEl).setName("Debug").setHeading();
 
 		new Setting(containerEl)
 			.setName("Clear all data")
 			.setDesc("Remove all VaultMind data and cache (cannot be undone)")
 			.addButton((button) =>
 				button
-					.setButtonText("Clear Data")
+					.setButtonText("Clear data")
 					.setWarning()
 					.onClick(async () => {
 						new ConfirmModal(

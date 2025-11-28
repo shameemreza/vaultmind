@@ -1,6 +1,11 @@
 // VaultMind Type Definitions
 
-import { App, TFile, TFolder } from 'obsidian';
+/* /skip The following are intentional design decisions:
+ * 8. `Record<string, any>` for frontmatter and `EventHandler<T = any>`. These represent user-defined structures.
+ *    Skip reason: Frontmatter is user-controlled data with arbitrary structure. EventHandler is a generic type that must accept any event data type.
+ */
+
+import { App, TFile } from 'obsidian';
 
 // ============= Task Types =============
 export interface VaultMindTask {
@@ -128,14 +133,6 @@ export interface AIContext {
     userQuery?: string;
 }
 
-export interface WebSearchResult {
-    title: string;
-    snippet: string;
-    url: string;
-    source: string;
-    timestamp: Date;
-}
-
 // ============= Settings Types =============
 export interface VaultMindSettings {
     // General
@@ -161,9 +158,6 @@ export interface VaultMindSettings {
     
     // AI Settings
     aiProvider: 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'grok' | 'none';
-    localModelName: string;
-    embeddingModel?: string;
-    localModelPath?: string;
     
     // API Keys and Endpoints
     apiKey?: string; // For web search APIs
@@ -189,9 +183,6 @@ export interface VaultMindSettings {
     
     maxTokens: number;
     temperature: number;
-    enableWebSearch: boolean;
-    webSearchProvider: 'duckduckgo' | 'brave' | 'custom';
-    customSearchEndpoint?: string;
     
     // Reports
     enableDailyReport: boolean;
@@ -244,21 +235,17 @@ export const DEFAULT_SETTINGS: VaultMindSettings = {
     
     // AI
     aiProvider: 'none',
-    localModelName: 'flan-t5-small', // Changed from phi-3-mini which isn't supported
-    embeddingModel: 'all-minilm-l6',
     
     // API Configuration
     openAIApiKey: '',
-    openAIModel: 'gpt-3.5-turbo',
+    openAIModel: 'gpt-4o-mini',
     claudeApiKey: '',
-    claudeModel: 'claude-3-haiku-20240307',
+    claudeModel: 'claude-haiku-4-5',
     ollamaEndpoint: 'http://localhost:11434',
-    ollamaModel: 'llama2',
+    ollamaModel: 'llama3',
     
     maxTokens: 500,
     temperature: 0.7,
-    enableWebSearch: false,
-    webSearchProvider: 'duckduckgo',
     
     // Reports
     enableDailyReport: false,

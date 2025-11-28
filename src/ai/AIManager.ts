@@ -151,8 +151,16 @@ export class AIManager {
      * Get cache key for current provider configuration
      */
     private getProviderKey(): string {
-        const { aiProvider, openAIApiKey, claudeApiKey, ollamaEndpoint } = this.settings;
-        return `${aiProvider}-${openAIApiKey || ''}-${claudeApiKey || ''}-${ollamaEndpoint || ''}`;
+        const { 
+            aiProvider, 
+            openAIApiKey, 
+            claudeApiKey, 
+            ollamaEndpoint,
+            geminiApiKey,
+            deepseekApiKey,
+            grokApiKey
+        } = this.settings;
+        return `${aiProvider}-${openAIApiKey || ''}-${claudeApiKey || ''}-${ollamaEndpoint || ''}-${geminiApiKey || ''}-${deepseekApiKey || ''}-${grokApiKey || ''}`;
     }
     
     /**
@@ -163,9 +171,11 @@ export class AIManager {
         this.settings = settings;
         const newKey = this.getProviderKey();
         
-        // If provider config changed, clear cache to force recreation
+        // If provider config changed, clear cache and reset current provider
         if (oldKey !== newKey) {
             this.providerCache.delete(oldKey);
+            // Reset current provider to force recreation on next getProvider() call
+            this.currentProvider = null;
         }
     }
     
@@ -174,13 +184,18 @@ export class AIManager {
      */
     async testConnection(): Promise<boolean> {
         const provider = await this.getProvider();
-        if (!provider) return false;
+        if (!provider) {
+            console.debug('VaultMind: No AI provider configured');
+            return false;
+        }
         
         try {
             // Simple test query
             const response = await provider.answerQuestion('Test', 'Test context');
+            console.debug('VaultMind: AI test response:', response ? 'Success' : 'Empty');
             return response.length > 0;
-        } catch {
+        } catch (error) {
+            console.error('VaultMind: AI connection test failed:', error);
             return false;
         }
     }
@@ -442,7 +457,7 @@ class OllamaProvider implements AIProvider {
             const pendingTasks = context.tasks.filter(t => !t.completed).slice(0, 10);
             contextPrompt += `Pending Tasks (${context.tasks.filter(t => !t.completed).length} total):\n`;
             pendingTasks.forEach(t => {
-                contextPrompt += `- ${t.content}${t.dueDate ? ` (due: ${t.dueDate})` : ''}\n`;
+                contextPrompt += `- ${t.content}${t.dueDate ? ` (due: ${new Date(t.dueDate).toLocaleDateString()})` : ''}\n`;
             });
             contextPrompt += '\n';
         }

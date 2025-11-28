@@ -1,8 +1,7 @@
 import { 
     AIProvider, 
     SummaryOptions, 
-    AIContext,
-    WebSearchResult
+    AIContext
 } from '../types';
 
 /**
@@ -13,11 +12,12 @@ export class FallbackAI implements AIProvider {
     name = 'FallbackAI';
     type: 'local' | 'cloud' | 'external' = 'local';
 
-    async initialize(): Promise<void> {
+    initialize(): Promise<void> {
         console.debug('VaultMind: Using fallback AI (no ML models)');
+        return Promise.resolve();
     }
 
-    async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
+    generateSummary(content: string, options?: SummaryOptions): Promise<string> {
         const maxLength = options?.maxLength || 150;
         const style = options?.style || 'brief';
         
@@ -25,13 +25,15 @@ export class FallbackAI implements AIProvider {
         const sentences = content.match(/[^.!?]+[.!?]+/g) || [];
         
         if (sentences.length === 0) {
-            return content.substring(0, maxLength) + '...';
+            return Promise.resolve(content.substring(0, maxLength) + '...');
         }
         
+        let result: string;
         switch (style) {
             case 'brief':
                 // Return first 2-3 sentences
-                return sentences.slice(0, 3).join(' ').substring(0, maxLength);
+                result = sentences.slice(0, 3).join(' ').substring(0, maxLength);
+                break;
                 
             case 'bullet-points': {
                 // Extract key sentences as bullet points
@@ -39,24 +41,26 @@ export class FallbackAI implements AIProvider {
                     .slice(0, 5)
                     .map(s => `• ${s.trim()}`)
                     .join('\n');
-                return bullets.substring(0, maxLength * 2);
+                result = bullets.substring(0, maxLength * 2);
+                break;
             }
                 
             case 'detailed': {
                 // Return first paragraph
                 const paragraphs = content.split('\n\n');
-                return paragraphs[0].substring(0, maxLength * 2);
+                result = paragraphs[0].substring(0, maxLength * 2);
+                break;
             }
                 
             default:
-                return sentences[0]?.substring(0, maxLength) || content.substring(0, maxLength);
+                result = sentences[0]?.substring(0, maxLength) || content.substring(0, maxLength);
         }
+        return Promise.resolve(result);
     }
 
-    async answerQuestion(question: string, context: string): Promise<string> {
+    answerQuestion(question: string, context: string): Promise<string> {
         // Simple keyword matching
         const questionLower = question.toLowerCase();
-        const contextLower = context.toLowerCase();
         
         // Look for sentences containing question keywords
         const keywords = questionLower
@@ -71,26 +75,26 @@ export class FallbackAI implements AIProvider {
         });
         
         if (relevantSentences.length > 0) {
-            return `Based on your vault: ${relevantSentences[0].trim()}`;
+            return Promise.resolve(`Based on your vault: ${relevantSentences[0].trim()}`);
         }
         
         // Fallback responses for common questions
         if (questionLower.includes('how many')) {
             const numbers = context.match(/\d+/g);
             if (numbers && numbers.length > 0) {
-                return `Found ${numbers[0]} in the context.`;
+                return Promise.resolve(`Found ${numbers[0]} in the context.`);
             }
         }
         
         if (questionLower.includes('what') || questionLower.includes('which')) {
             const firstSentence = sentences[0] || '';
-            return `From your notes: ${firstSentence.trim()}`;
+            return Promise.resolve(`From your notes: ${firstSentence.trim()}`);
         }
         
-        return 'I can help you search your vault, but advanced AI features require downloading a language model. Please check Settings → VaultMind to download a model.';
+        return Promise.resolve('I can help you search your vault, but advanced AI features require downloading a language model. Please check Settings → VaultMind to download a model.');
     }
 
-    async generateSuggestions(context: AIContext): Promise<string[]> {
+    generateSuggestions(context: AIContext): Promise<string[]> {
         const suggestions: string[] = [];
         
         // Provide basic rule-based suggestions
@@ -137,10 +141,10 @@ export class FallbackAI implements AIProvider {
             suggestions.push('Keep up the good work! Review your tasks and goals regularly.');
         }
         
-        return suggestions.slice(0, 5);
+        return Promise.resolve(suggestions.slice(0, 5));
     }
 
-    async generateEmbedding(text: string): Promise<Float32Array> {
+    generateEmbedding(text: string): Promise<Float32Array> {
         // Simple hash-based pseudo-embedding for basic similarity
         // This is not ML but allows basic text matching
         const vector = new Float32Array(128);
@@ -159,10 +163,10 @@ export class FallbackAI implements AIProvider {
             }
         }
         
-        return vector;
+        return Promise.resolve(vector);
     }
 
-    async generateDailySummary(context: AIContext): Promise<string> {
+    generateDailySummary(context: AIContext): Promise<string> {
         const tasksCompleted = context.tasks?.filter(t => t.completed).length || 0;
         const tasksTotal = context.tasks?.length || 0;
         const goalsProgressed = context.goals?.filter(g => g.progress > 0).length || 0;
@@ -171,7 +175,7 @@ export class FallbackAI implements AIProvider {
         const hours = Math.floor(timeTracked / 60);
         const minutes = timeTracked % 60;
         
-        return `# Daily Summary - ${new Date().toLocaleDateString()}
+        const summary = `# Daily Summary - ${new Date().toLocaleDateString()}
 
 ## 📊 Statistics
 - Tasks: ${tasksCompleted}/${tasksTotal} completed
@@ -191,9 +195,11 @@ ${timeTracked < 60 ? '💡 Try to dedicate more focused time to your tasks.' : '
 
 ---
 *Note: Advanced AI summaries require downloading a language model. Check Settings → VaultMind.*`;
+        return Promise.resolve(summary);
     }
 
-    async cleanup(): Promise<void> {
+    cleanup(): Promise<void> {
         // Nothing to clean up in fallback mode
+        return Promise.resolve();
     }
 }

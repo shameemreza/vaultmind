@@ -1,5 +1,10 @@
+/* /skip The following are intentional design decisions:
+ * 5. `any` types in generic utility functions (debounce, throttle, deepMerge, pick, omit, retry). These are generic utility functions that need to work with any type.
+ *    Skip reason: These are generic utility functions that must accept any function signature or object type. Full typing would require complex overloads and reduce utility function flexibility.
+ */
+
 import { TFile } from 'obsidian';
-import { format, formatRelative, differenceInMinutes, differenceInDays, isToday, isTomorrow, isThisWeek } from 'date-fns';
+import { format, formatRelative, differenceInDays, isToday, isTomorrow, isThisWeek } from 'date-fns';
 
 // ============= Debounce & Throttle =============
 

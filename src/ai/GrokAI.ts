@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { AIProvider, AIContext, SummaryOptions } from '../types';
+import { AIProvider, AIContext, SummaryOptions, VaultMindSettings } from '../types';
 
 /**
  * Grok AI Provider (X.AI)
@@ -12,15 +12,16 @@ export class GrokAI implements AIProvider {
     private model: string;
     private baseUrl = 'https://api.x.ai/v1';
     
-    constructor(settings: any) {
+    constructor(settings: VaultMindSettings) {
         this.apiKey = settings.grokApiKey || '';
         this.model = settings.grokModel || 'grok-beta';
     }
     
-    async initialize(): Promise<void> {
+    initialize(): Promise<void> {
         if (!this.apiKey) {
-            throw new Error('Grok API key not configured');
+            return Promise.reject(new Error('Grok API key not configured'));
         }
+        return Promise.resolve();
     }
     
     async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
@@ -99,7 +100,7 @@ export class GrokAI implements AIProvider {
         return this.callGrok(messages);
     }
     
-    async generateEmbedding(text: string): Promise<Float32Array> {
+    generateEmbedding(text: string): Promise<Float32Array> {
         // Grok doesn't provide embeddings API yet, use fallback
         const hash = text.split('').reduce((a, b) => {
             a = ((a << 5) - a) + b.charCodeAt(0);
@@ -110,10 +111,10 @@ export class GrokAI implements AIProvider {
         for (let i = 0; i < 768; i++) {
             embedding[i] = ((hash + i) % 1000) / 1000;
         }
-        return embedding;
+        return Promise.resolve(embedding);
     }
     
-    private async callGrok(messages: any[]): Promise<string> {
+    private async callGrok(messages: { role: string; content: string }[]): Promise<string> {
         const response = await requestUrl({
             url: `${this.baseUrl}/chat/completions`,
             method: 'POST',
@@ -136,7 +137,8 @@ export class GrokAI implements AIProvider {
         throw new Error('Failed to get response from Grok');
     }
     
-    async cleanup(): Promise<void> {
+    cleanup(): Promise<void> {
         // Nothing to clean up
+        return Promise.resolve();
     }
 }

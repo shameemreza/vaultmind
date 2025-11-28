@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { TFile, Vault } from 'obsidian';
 import { IndexedNote } from '../types';
 
 /**
@@ -16,7 +16,7 @@ export class ContextManager {
         query: string,
         attachedFiles: TFile[],
         allNotes: IndexedNote[],
-        vault: any
+        vault: Vault
     ): Promise<string> {
         let context = '';
         let currentLength = 0;

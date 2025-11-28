@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { AIProvider, AIContext, SummaryOptions } from '../types';
+import { AIProvider, AIContext, SummaryOptions, VaultMindSettings } from '../types';
 
 /**
  * DeepSeek AI Provider
@@ -12,15 +12,16 @@ export class DeepSeekAI implements AIProvider {
     private model: string;
     private baseUrl = 'https://api.deepseek.com/v1';
     
-    constructor(settings: any) {
+    constructor(settings: VaultMindSettings) {
         this.apiKey = settings.deepseekApiKey || '';
         this.model = settings.deepseekModel || 'deepseek-chat';
     }
     
-    async initialize(): Promise<void> {
+    initialize(): Promise<void> {
         if (!this.apiKey) {
-            throw new Error('DeepSeek API key not configured');
+            return Promise.reject(new Error('DeepSeek API key not configured'));
         }
+        return Promise.resolve();
     }
     
     async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
@@ -100,7 +101,7 @@ export class DeepSeekAI implements AIProvider {
         return this.callDeepSeek(messages);
     }
     
-    async generateEmbedding(text: string): Promise<Float32Array> {
+    generateEmbedding(text: string): Promise<Float32Array> {
         // DeepSeek doesn't provide embeddings API yet, use fallback
         const hash = text.split('').reduce((a, b) => {
             a = ((a << 5) - a) + b.charCodeAt(0);
@@ -111,10 +112,10 @@ export class DeepSeekAI implements AIProvider {
         for (let i = 0; i < 768; i++) {
             embedding[i] = ((hash + i) % 1000) / 1000;
         }
-        return embedding;
+        return Promise.resolve(embedding);
     }
     
-    private async callDeepSeek(messages: any[]): Promise<string> {
+    private async callDeepSeek(messages: { role: string; content: string }[]): Promise<string> {
         const response = await requestUrl({
             url: `${this.baseUrl}/chat/completions`,
             method: 'POST',
@@ -137,7 +138,8 @@ export class DeepSeekAI implements AIProvider {
         throw new Error('Failed to get response from DeepSeek');
     }
     
-    async cleanup(): Promise<void> {
+    cleanup(): Promise<void> {
         // Nothing to clean up
+        return Promise.resolve();
     }
 }

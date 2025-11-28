@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian';
-import { AIProvider, AIContext, SummaryOptions } from '../types';
+import { AIProvider, AIContext, SummaryOptions, VaultMindSettings } from '../types';
 
 /**
  * Google Gemini AI Provider
@@ -10,15 +10,16 @@ export class GeminiAI implements AIProvider {
     private apiKey: string;
     private model: string;
     
-    constructor(settings: any) {
+    constructor(settings: VaultMindSettings) {
         this.apiKey = settings.geminiApiKey || '';
         this.model = settings.geminiModel || 'gemini-pro';
     }
     
-    async initialize(): Promise<void> {
+    initialize(): Promise<void> {
         if (!this.apiKey) {
-            throw new Error('Gemini API key not configured');
+            return Promise.reject(new Error('Gemini API key not configured'));
         }
+        return Promise.resolve();
     }
     
     async generateSummary(content: string, options?: SummaryOptions): Promise<string> {
@@ -114,7 +115,7 @@ export class GeminiAI implements AIProvider {
         return new Float32Array(768).fill(0);
     }
     
-    private async callGemini(messages: any[]): Promise<string> {
+    private async callGemini(messages: { role: string; content?: string; parts?: { text: string }[] }[]): Promise<string> {
         const response = await requestUrl({
             url: `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
             method: 'POST',
@@ -139,7 +140,8 @@ export class GeminiAI implements AIProvider {
         throw new Error('Failed to get response from Gemini');
     }
     
-    async cleanup(): Promise<void> {
+    cleanup(): Promise<void> {
         // Nothing to clean up
+        return Promise.resolve();
     }
 }

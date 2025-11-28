@@ -5,7 +5,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Dashboard command
     plugin.addCommand({
         id: 'open-dashboard',
-        name: 'Open Dashboard',
+        name: 'Open dashboard',
         callback: async () => {
             await plugin.openDashboard();
         }
@@ -14,7 +14,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Chat command
     plugin.addCommand({
         id: 'open-chat',
-        name: 'Open AI Chat',
+        name: 'Open AI chat',
         callback: async () => {
             await plugin.openChat();
         }
@@ -23,7 +23,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Index vault command
     plugin.addCommand({
         id: 'index-vault',
-        name: 'Index Vault',
+        name: 'Index vault',
         callback: async () => {
             await plugin.indexVault();
         }
@@ -48,7 +48,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Start/Stop time tracking
     plugin.addCommand({
         id: 'toggle-time-tracking',
-        name: 'Toggle Time Tracking',
+        name: 'Toggle time tracking',
         callback: async () => {
             const activeEntry = plugin.timeTracker.getActiveEntry();
             if (activeEntry) {
@@ -64,7 +64,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Quick task creation
     plugin.addCommand({
         id: 'quick-task',
-        name: 'Create Quick Task',
+        name: 'Create quick task',
         editorCallback: (editor) => {
             const selection = editor.getSelection();
             const task = `- [ ] ${selection || 'New task'}`;
@@ -72,20 +72,20 @@ export function registerCommands(plugin: VaultMindPlugin): void {
         }
     });
 
-    // Ask VaultMind a question
+    // Ask AI a question
     plugin.addCommand({
-        id: 'ask-vaultmind',
-        name: 'Ask VaultMind',
+        id: 'ask-ai',
+        name: 'Ask AI',
         callback: () => {
             // This will be implemented with a modal
-            new Notice('Ask VaultMind feature coming soon!');
+            new Notice('Ask AI feature coming soon!');
         }
     });
 
     // Scan tasks command
     plugin.addCommand({
         id: 'scan-tasks',
-        name: 'Scan All Tasks',
+        name: 'Scan all tasks',
         callback: async () => {
             const tasks = await plugin.taskEngine.scanTasks();
             new Notice(`Found ${tasks.length} tasks in your vault`);
@@ -95,7 +95,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Show notifications
     plugin.addCommand({
         id: 'show-notifications',
-        name: 'Show Notifications',
+        name: 'Show notifications',
         callback: () => {
             const notifications = plugin.notificationService.getNotifications(true);
             if (notifications.length === 0) {
@@ -109,18 +109,18 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Clear cache command (for debugging)
     plugin.addCommand({
         id: 'clear-cache',
-        name: 'Clear VaultMind Cache',
+        name: 'Clear cache',
         callback: async () => {
             const storage = plugin.vaultIndexer.storage;
             await storage.clearCache();
-            new Notice('VaultMind cache cleared');
+            new Notice('Cache cleared');
         }
     });
 
     // Reload AI model
     plugin.addCommand({
         id: 'reload-ai',
-        name: 'Reload AI Model',
+        name: 'Reload AI model',
         callback: async () => {
             if (plugin.ai) {
                 new Notice('Reloading AI model...');
@@ -168,7 +168,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Test notification commands
     plugin.addCommand({
         id: 'test-notification',
-        name: 'Test Notification (with sound)',
+        name: 'Test notification',
         callback: () => {
             plugin.notificationService.notify({
                 type: 'info',
@@ -184,7 +184,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     
     plugin.addCommand({
         id: 'test-warning',
-        name: 'Test Warning Notification',
+        name: 'Test warning notification',
         callback: () => {
             plugin.notificationService.notify({
                 type: 'warning',
@@ -199,7 +199,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     
     plugin.addCommand({
         id: 'test-reminder',
-        name: 'Test Task Reminder',
+        name: 'Test task reminder',
         callback: () => {
             plugin.notificationService.notify({
                 type: 'reminder',
@@ -220,7 +220,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     
     plugin.addCommand({
         id: 'test-success',
-        name: 'Test Success Notification',
+        name: 'Test success notification',
         callback: () => {
             plugin.notificationService.notify({
                 type: 'success',
@@ -233,12 +233,12 @@ export function registerCommands(plugin: VaultMindPlugin): void {
         }
     });
     
-    // Generate daily summary
+    // Generate daily summary (alternative)
     plugin.addCommand({
         id: 'generate-daily-summary',
-        name: 'Generate Daily Summary',
+        name: 'Generate daily summary',
         callback: async () => {
-            new Notice('Generating daily summary...');
+            new Notice('Generating daily summary…');
             const summary = await plugin.generateDailySummary();
             if (summary) {
                 // Create a new note with the summary
@@ -266,7 +266,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Generate weekly review
     plugin.addCommand({
         id: 'generate-weekly-review',
-        name: 'Generate Weekly Review',
+        name: 'Generate weekly review',
         callback: async () => {
             new Notice('Generating weekly review...');
             
@@ -287,8 +287,8 @@ export function registerCommands(plugin: VaultMindPlugin): void {
 - Average Daily: ${timeStats.averageDaily.toFixed(0)} minutes
 
 ## Recent Activity
-${plugin.timeTracker.getEntries().slice(-5).map((e: any) => 
-    `- ${e.task || 'Unnamed'}: ${e.duration || 0}min on ${new Date(e.startTime).toLocaleDateString()}`
+${plugin.timeTracker.getEntries().slice(-5).map((e) => 
+    `- ${e.description || 'Unnamed'}: ${e.duration || 0}min on ${new Date(e.startTime).toLocaleDateString()}`
 ).join('\n')}
 
 ## Recommendations

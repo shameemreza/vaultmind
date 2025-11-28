@@ -1,4 +1,4 @@
-import { VaultMindError, ErrorCodes } from '../types';
+import { VaultMindError } from '../types';
 
 /**
  * Simple embedding generation without heavy ML libraries

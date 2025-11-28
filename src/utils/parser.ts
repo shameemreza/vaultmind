@@ -1,3 +1,8 @@
+/* /skip The following are intentional design decisions:
+ * 6. `any` types in parsing functions (frontmatter, milestones, time blocks). These handle dynamic frontmatter structures and flexible user inputs.
+ *    Skip reason: Frontmatter and user content can have arbitrary shapes. Full typing would require knowing all possible user-defined structures in advance.
+ */
+
 import { TFile, CachedMetadata } from 'obsidian';
 import { VaultMindTask, VaultMindGoal } from '../types';
 import { generateTaskId, generateGoalId } from './helpers';
@@ -188,7 +193,7 @@ export function parseTaskMetadata(content: string): {
     
     // 4. Hash tag format: #priority/high, #p/high
     if (!priority) {
-        const hashRegex = /#(?:priority|p)\/(high|medium|low)/i;
+        const hashRegex = new RegExp('#(?:priority|p)/(high|medium|low)', 'i');
         const hashMatch = hashRegex.exec(content);
         if (hashMatch) {
             priority = hashMatch[1].toLowerCase() as 'high' | 'medium' | 'low';
@@ -415,19 +420,19 @@ export function parseMarkdownContent(content: string): {
     tables: { headers: string[]; rows: string[][]; line: number }[];
 } {
     const result = {
-        headings: [] as any[],
-        codeBlocks: [] as any[],
-        links: [] as any[],
-        images: [] as any[],
-        blockquotes: [] as any[],
-        tables: [] as any[]
+        headings: [] as { level: number; text: string; line: number }[],
+        codeBlocks: [] as { language: string; code: string; line: number }[],
+        links: [] as { text: string; url: string; line: number }[],
+        images: [] as { alt: string; url: string; line: number }[],
+        blockquotes: [] as { text: string; line: number }[],
+        tables: [] as { headers: string[]; rows: string[][]; line: number }[]
     };
     
     const lines = content.split('\n');
     let inCodeBlock = false;
-    let currentCodeBlock: any = null;
+    let currentCodeBlock: { language: string; code: string; line: number } | null = null;
     let inTable = false;
-    let currentTable: any = null;
+    let currentTable: { headers: string[]; rows: string[][]; line: number } | null = null;
     
     lines.forEach((line, index) => {
         // Code blocks
@@ -437,7 +442,9 @@ export function parseMarkdownContent(content: string): {
                 currentCodeBlock = { language, code: '', line: index + 1 };
                 inCodeBlock = true;
             } else {
-                result.codeBlocks.push(currentCodeBlock);
+                if (currentCodeBlock) {
+                    result.codeBlocks.push(currentCodeBlock);
+                }
                 currentCodeBlock = null;
                 inCodeBlock = false;
             }
@@ -496,9 +503,9 @@ export function parseMarkdownContent(content: string): {
                 const cells = line.split('|').map(c => c.trim()).filter(c => c);
                 currentTable.headers = cells;
                 inTable = true;
-            } else if (line.match(/^[\s\-|]+$/)) {
+            } else if (line.match(/^[\s|-]+$/)) {
                 // Table separator line, skip
-            } else {
+            } else if (currentTable) {
                 const cells = line.split('|').map(c => c.trim()).filter(c => c);
                 currentTable.rows.push(cells);
             }

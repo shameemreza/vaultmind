@@ -19,7 +19,7 @@ export class GoalEngine implements IGoalEngine {
         await this.scanGoals();
     }
 
-    async scanGoals(): Promise<VaultMindGoal[]> {
+    scanGoals(): Promise<VaultMindGoal[]> {
         const index = this.vaultIndexer.getIndex();
         this.goals.clear();
         
@@ -29,7 +29,7 @@ export class GoalEngine implements IGoalEngine {
         }
         
         console.debug(`VaultMind: Found ${this.goals.size} goals`);
-        return Array.from(this.goals.values());
+        return Promise.resolve(Array.from(this.goals.values()));
     }
 
     getGoal(id: string): VaultMindGoal | undefined {
@@ -40,15 +40,16 @@ export class GoalEngine implements IGoalEngine {
         return Array.from(this.goals.values());
     }
 
-    async updateGoal(id: string, updates: Partial<VaultMindGoal>): Promise<void> {
+    updateGoal(id: string, updates: Partial<VaultMindGoal>): Promise<void> {
         const goal = this.goals.get(id);
         if (!goal) {
-            throw new Error(`Goal ${id} not found`);
+            return Promise.reject(new Error(`Goal ${id} not found`));
         }
         
         Object.assign(goal, updates);
         goal.updatedAt = new Date();
         this.goals.set(id, goal);
+        return Promise.resolve();
     }
 
     calculateProgress(goalId: string): number {

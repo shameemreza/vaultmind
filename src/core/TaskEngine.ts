@@ -1,13 +1,12 @@
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { 
     VaultMindTask, 
     ITaskEngine, 
     TaskFilter, 
-    TaskStatistics,
-    VaultIndex
+    TaskStatistics
 } from '../types';
 import { VaultIndexer } from './VaultIndexer';
-import { generateTaskId } from '../utils/helpers';
+// Helper utilities imported as needed
 
 export class TaskEngine implements ITaskEngine {
     private app: App | null = null;
@@ -23,7 +22,7 @@ export class TaskEngine implements ITaskEngine {
         await this.scanTasks();
     }
 
-    async scanTasks(): Promise<VaultMindTask[]> {
+    scanTasks(): Promise<VaultMindTask[]> {
         const index = this.vaultIndexer.getIndex();
         this.tasks.clear();
         
@@ -33,7 +32,7 @@ export class TaskEngine implements ITaskEngine {
         }
         
         console.debug(`VaultMind: Found ${this.tasks.size} tasks`);
-        return Array.from(this.tasks.values());
+        return Promise.resolve(Array.from(this.tasks.values()));
     }
 
     getTask(id: string): VaultMindTask | undefined {
@@ -82,10 +81,10 @@ export class TaskEngine implements ITaskEngine {
         return tasks;
     }
 
-    async updateTask(id: string, updates: Partial<VaultMindTask>): Promise<void> {
+    updateTask(id: string, updates: Partial<VaultMindTask>): Promise<void> {
         const task = this.tasks.get(id);
         if (!task) {
-            throw new Error(`Task ${id} not found`);
+            return Promise.reject(new Error(`Task ${id} not found`));
         }
         
         // Update task in memory
@@ -94,6 +93,7 @@ export class TaskEngine implements ITaskEngine {
         
         // TODO: Update task in the actual file
         // This would require modifying the markdown file
+        return Promise.resolve();
     }
 
     getStatistics(): TaskStatistics {

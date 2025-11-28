@@ -202,7 +202,7 @@ export default class VaultMindPlugin extends Plugin {
 			// AI Manager initialized
 
 			// All services initialized
-		} catch (error) {
+		} catch {
 			// Service initialization failed
 			new Notice(
 				"VaultMind: Some features may be limited. Please restart Obsidian if issues persist."
@@ -214,7 +214,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Dashboard command
 		this.addCommand({
 			id: "open-dashboard",
-			name: "Open Dashboard",
+			name: "Open dashboard",
 			callback: async () => {
 				await this.openDashboard();
 			},
@@ -223,7 +223,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Index vault command
 		this.addCommand({
 			id: "index-vault",
-			name: "Index Vault",
+			name: "Index vault",
 			callback: async () => {
 				await this.indexVault();
 			},
@@ -232,7 +232,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Quick task creation
 		this.addCommand({
 			id: "quick-task",
-			name: "Create Quick Task",
+			name: "Create quick task",
 			editorCallback: (editor) => {
 				const selection = editor.getSelection();
 				const task = `- [ ] ${selection || "New task"}`;
@@ -243,7 +243,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Toggle time tracking
 		this.addCommand({
 			id: "toggle-time-tracking",
-			name: "Toggle Time Tracking",
+			name: "Toggle time tracking",
 			callback: async () => {
 				if (this.timeTracker) {
 					const activeEntry = this.timeTracker.getActiveEntry();
@@ -261,10 +261,10 @@ export default class VaultMindPlugin extends Plugin {
 		// Chat commands
 		this.addCommand({
 			id: "open-ai-chat",
-			name: "Open AI Chat",
+			name: "Open AI chat",
 			callback: async () => {
 				await this.openChat();
-			}
+			},
 		});
 
 		this.addCommand({
@@ -305,7 +305,7 @@ export default class VaultMindPlugin extends Plugin {
 		this.statusBarItem = this.addStatusBarItem();
 
 		// Make status bar clickable - opens dashboard
-		this.statusBarItem.style.cursor = "pointer";
+		this.statusBarItem.addClass("vaultmind-status-bar-clickable");
 		this.statusBarItem.addEventListener("click", async (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -447,7 +447,7 @@ export default class VaultMindPlugin extends Plugin {
 					"VaultMind: Click for dashboard, right-click for menu"
 				);
 			}
-		} catch (error) {
+		} catch {
 			this.statusBarItem.setText("VaultMind");
 			this.statusBarItem.setAttr(
 				"title",
@@ -551,7 +551,7 @@ export default class VaultMindPlugin extends Plugin {
 			}
 
 			// Call the actual indexer for proper storage
-			const index = await this.vaultIndexer.indexVault();
+			await this.vaultIndexer.indexVault();
 			const duration = Date.now() - startTime;
 
 			// Show detailed results
@@ -578,7 +578,7 @@ export default class VaultMindPlugin extends Plugin {
 					view.refresh();
 				}
 			});
-		} catch (error) {
+		} catch {
 			// Indexing failed
 			new Notice(
 				"Unable to index vault. Some search features may be limited.",
@@ -622,16 +622,38 @@ export default class VaultMindPlugin extends Plugin {
 	 * Test AI connection
 	 */
 	async testAIConnection(): Promise<boolean> {
-		if (this.aiManager) {
-			const result = await this.aiManager.testConnection();
-			if (result) {
-				new Notice("✓ AI connection successful");
-			} else {
-				new Notice("✗ AI connection failed");
-			}
-			return result;
+		if (!this.aiManager) {
+			new Notice("✗ AI Manager not initialized");
+			return false;
 		}
-		return false;
+
+		// Ensure provider is created/updated
+		this.aiProvider = await this.aiManager.getProvider();
+
+		if (!this.aiProvider) {
+			const provider = this.settings.aiProvider;
+			if (provider === "none") {
+				new Notice(
+					"✗ No AI provider selected. Please select one in settings."
+				);
+			} else {
+				new Notice(
+					`✗ ${provider} provider not configured. Check your API key.`
+				);
+			}
+			return false;
+		}
+
+		const result = await this.aiManager.testConnection();
+		if (result) {
+			new Notice("✓ AI connection successful");
+		} else {
+			const provider = this.settings.aiProvider;
+			new Notice(
+				`✗ ${provider} connection failed. Check your API key and settings.`
+			);
+		}
+		return result;
 	}
 
 	async generateDailySummary(): Promise<string> {
@@ -652,7 +674,7 @@ export default class VaultMindPlugin extends Plugin {
 		}%
 
 ## Notes
-- AI features will be available in v0.2.0
+- Use the AI Chat for intelligent assistance
 - Use the dashboard for detailed statistics
 `;
 
@@ -660,7 +682,18 @@ export default class VaultMindPlugin extends Plugin {
 	}
 
 	async askQuestion(question: string): Promise<string> {
-		// Simplified version
-		return "AI features are coming in v0.2.0. This will include local LLM support with 18+ models.";
+		if (this.aiProvider) {
+			const context = await this.buildQuickContext();
+			return await this.aiProvider.answerQuestion(question, context);
+		}
+		return "Please configure an AI provider in settings to use this feature.";
+	}
+
+	private async buildQuickContext(): Promise<string> {
+		const tasks = this.taskEngine.getTasks();
+		const goals = this.goalEngine.getGoals();
+		return `Tasks: ${tasks.length} total, ${
+			tasks.filter((t) => !t.completed).length
+		} pending. Goals: ${goals.length} total.`;
 	}
 }

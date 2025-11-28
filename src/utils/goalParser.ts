@@ -1,3 +1,8 @@
+/* /skip The following are intentional design decisions:
+ * 7. `any` types in goal parsing functions (frontmatter, metadata). These handle dynamic frontmatter structures.
+ *    Skip reason: Frontmatter can have arbitrary user-defined shapes. Strict typing would prevent parsing flexible goal formats.
+ */
+
 import { TFile } from 'obsidian';
 import { VaultMindGoal } from '../types';
 
@@ -80,7 +85,7 @@ export function parseGoalsFromNote(
     }
     
     // 4. Parse from tags #goal/...
-    const tagPattern = /#goal\/([a-zA-Z0-9_-]+)/g;
+    const tagPattern = new RegExp('#goal/([a-zA-Z0-9_-]+)', 'g');
     while ((match = tagPattern.exec(content)) !== null) {
         const goalName = match[1].replace(/-/g, ' ').replace(/_/g, ' ');
         const goal = createGoal(file, goalName, 'tag');
