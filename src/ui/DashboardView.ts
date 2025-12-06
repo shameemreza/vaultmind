@@ -208,11 +208,11 @@ export class DashboardView extends ItemView {
 						| "all"
 						| "high"
 						| "medium"
-						| "low";
-				}
-				this.refresh();
-			});
+					| "low";
+			}
+			void this.refresh();
 		});
+	});
 
 		tasksContainer = tasksSection.createEl("div", {
 			cls: "vaultmind-tasks",
@@ -528,7 +528,7 @@ export class DashboardView extends ItemView {
 				attr: { type: "checkbox" },
 				cls: "task-checkbox",
 			});
-			(checkbox as HTMLInputElement).checked = task.completed || false;
+			checkbox.checked = task.completed || false;
 			checkbox.addClass("vaultmind-checkbox");
 			checkbox.addClass("vaultmind-checkbox-wrapper");
 			checkbox.addClass("vaultmind-flex-shrink-0");
@@ -536,7 +536,7 @@ export class DashboardView extends ItemView {
 			// Handle checkbox click
 			checkbox.addEventListener("click", (e) => {
 				e.stopPropagation();
-				const isChecked = (checkbox as HTMLInputElement).checked;
+				const isChecked = checkbox.checked;
 				// Toggle task completion
 
 				void (async () => {
@@ -735,10 +735,10 @@ export class DashboardView extends ItemView {
 				text: "Clear",
 				cls: "clear-tag-filter vaultmind-clear-filter-btn",
 			});
-			clearBtn.addEventListener("click", () => {
-				this.activeTagFilter = null;
-				this.refresh();
-			});
+		clearBtn.addEventListener("click", () => {
+			this.activeTagFilter = null;
+			void this.refresh();
+		});
 		}
 
 		// Check if any tasks match the filter
@@ -1240,7 +1240,7 @@ export class DashboardView extends ItemView {
 		}
 
 		// Refresh the dashboard with filter
-		this.refresh();
+		void this.refresh();
 	}
 
 	/**

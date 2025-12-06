@@ -322,7 +322,7 @@ export async function retryWithBackoff<T>(
     maxRetries: number = 3,
     baseDelayMs: number = 1000
 ): Promise<T> {
-    let lastError: Error | undefined;
+    let lastError: Error = new Error('All retries failed');
     
     for (let i = 0; i < maxRetries; i++) {
         try {

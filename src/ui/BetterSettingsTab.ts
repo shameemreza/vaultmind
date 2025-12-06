@@ -83,7 +83,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 				dropdown
 					.addOption("openai", "OpenAI (GPT)")
 					.addOption("anthropic", "Claude (Anthropic)")
-					.addOption("ollama", "Ollama (Self-hosted)")
+					.addOption("ollama", "Ollama (self-hosted)")
 					.addOption("gemini", "Google Gemini")
 					.addOption("deepseek", "DeepSeek")
 					.addOption("grok", "Grok (X.AI)")

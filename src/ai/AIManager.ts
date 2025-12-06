@@ -371,7 +371,7 @@ class AnthropicProvider implements AIProvider {
     async generateEmbedding(text: string): Promise<Float32Array> {
         // Claude doesn't have embeddings API, use simple embeddings
         const embeddings = new SimpleEmbeddings();
-        return embeddings.generateEmbedding(text);
+        return await embeddings.generateEmbedding(text);
     }
     
     private async callAnthropic(prompt: string): Promise<string> {

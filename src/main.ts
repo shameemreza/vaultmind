@@ -741,7 +741,7 @@ export default class VaultMindPlugin extends Plugin {
 			completedToday.slice(0, 10).forEach((t) => {
 				const cleanContent = t.content
 					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
-					.replace(/[⏫🔼🔽]/g, "")
+					.replace(/[⏫🔼🔽]/gu, "")
 					.trim();
 				summary += `- [x] ${cleanContent}\n`;
 			});
@@ -757,7 +757,7 @@ export default class VaultMindPlugin extends Plugin {
 			dueToday.forEach((t) => {
 				const cleanContent = t.content
 					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
-					.replace(/[⏫🔼🔽]/g, "")
+					.replace(/[⏫🔼🔽]/gu, "")
 					.trim();
 				const priority =
 					t.priority === "high"
@@ -776,7 +776,7 @@ export default class VaultMindPlugin extends Plugin {
 			overdue.slice(0, 5).forEach((t) => {
 				const cleanContent = t.content
 					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
-					.replace(/[⏫🔼🔽]/g, "")
+					.replace(/[⏫🔼🔽]/gu, "")
 					.trim();
 				const daysOverdue = Math.floor(
 					(today.getTime() - new Date(t.dueDate!).getTime()) /
@@ -796,7 +796,7 @@ export default class VaultMindPlugin extends Plugin {
 			highPriority.slice(0, 5).forEach((t) => {
 				const cleanContent = t.content
 					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
-					.replace(/[⏫🔼🔽]/g, "")
+					.replace(/[⏫🔼🔽]/gu, "")
 					.trim();
 				summary += `- [ ] ${cleanContent}\n`;
 			});

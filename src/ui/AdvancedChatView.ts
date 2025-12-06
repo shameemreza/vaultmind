@@ -210,7 +210,7 @@ export class AdvancedChatView extends ItemView {
 			this.inputEl.addEventListener("keydown", (e) => {
 				if (e.key === "Enter" && !e.shiftKey) {
 					e.preventDefault();
-					this.sendMessage();
+					void this.sendMessage();
 				}
 			});
 
@@ -219,7 +219,7 @@ export class AdvancedChatView extends ItemView {
 				cls: "vaultmind-chat-send-button",
 				text: "Send",
 			});
-			this.sendBtn.addEventListener("click", () => this.sendMessage());
+			this.sendBtn.addEventListener("click", () => void this.sendMessage());
 
 			// Auto-attach current file if open
 			const activeFile = this.plugin.app.workspace.getActiveFile();
@@ -263,7 +263,7 @@ export class AdvancedChatView extends ItemView {
 		clearBtn.addEventListener("click", () => {
 			this.messages = [];
 			this.messagesEl.empty();
-			this.addWelcomeMessage();
+			void this.addWelcomeMessage();
 		});
 
 		// Messages area

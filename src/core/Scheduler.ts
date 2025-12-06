@@ -96,7 +96,7 @@ export class Scheduler {
 	private async generateDailyReport(): Promise<void> {
 		console.debug("VaultMind: Generating daily report...");
 
-		const summary = await this.plugin.generateDailySummary();
+		const summary = this.plugin.generateDailySummary();
 		if (summary) {
 			// Create or update daily note
 			const fileName = `Daily Report - ${

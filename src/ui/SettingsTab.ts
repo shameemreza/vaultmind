@@ -52,7 +52,7 @@ export class SettingsTab extends PluginSettingTab {
 				dropdown
 					.addOption("openai", "OpenAI")
 					.addOption("anthropic", "Anthropic Claude")
-					.addOption("ollama", "Ollama (Local)")
+					.addOption("ollama", "Ollama (local)")
 					.addOption("gemini", "Google Gemini")
 					.addOption("deepseek", "DeepSeek")
 					.addOption("grok", "Grok (X.AI)")

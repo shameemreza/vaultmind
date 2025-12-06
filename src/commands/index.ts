@@ -34,7 +34,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
         id: 'generate-daily-summary',
         name: 'Generate daily summary',
         callback: async () => {
-            const summary = await plugin.generateDailySummary();
+            const summary = plugin.generateDailySummary();
             if (summary) {
                 // Create a new note with the summary
                 const fileName = `Daily Summary - ${new Date().toISOString().split('T')[0]}.md`;
@@ -212,7 +212,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
                 actionLabel: 'View Task',
                 action: () => {
                     new Notice('Task action triggered (demo)');
-                    plugin.openDashboard();
+                    void plugin.openDashboard();
                 }
             });
         }
@@ -239,7 +239,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
         name: 'Generate daily summary',
         callback: async () => {
             new Notice('Generating daily summary…');
-            const summary = await plugin.generateDailySummary();
+            const summary = plugin.generateDailySummary();
             if (summary) {
                 // Create a new note with the summary
                 const fileName = `Daily Summary - ${new Date().toISOString().split('T')[0]}.md`;
