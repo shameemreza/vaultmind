@@ -1,10 +1,36 @@
-/* /skip The following are intentional design decisions:
- * 7. `any` types in goal parsing functions (frontmatter, metadata). These handle dynamic frontmatter structures.
- *    Skip reason: Frontmatter can have arbitrary user-defined shapes. Strict typing would prevent parsing flexible goal formats.
- */
-
 import { TFile } from 'obsidian';
-import { VaultMindGoal } from '../types';
+import { VaultMindGoal, Milestone } from '../types';
+
+interface GoalFrontmatter {
+    goal?: string | GoalData | GoalData[];
+    goals?: string | GoalData | GoalData[];
+    objective?: string | string[];
+    objectives?: string | string[];
+}
+
+type GoalStatus = 'active' | 'completed' | 'paused' | 'cancelled';
+
+interface GoalData {
+    title?: string;
+    name?: string;
+    description?: string;
+    progress?: number;
+    targetDate?: string;
+    status?: GoalStatus;
+    category?: string;
+    milestones?: MilestoneData[];
+    completedDate?: string;
+}
+
+interface MilestoneData {
+    id?: string;
+    title?: string;
+    name?: string;
+    completed?: boolean;
+    completedAt?: string;
+    targetDate?: string;
+    date?: Date;
+}
 
 /**
  * Parse goals from note content and frontmatter
@@ -17,14 +43,14 @@ import { VaultMindGoal } from '../types';
 export function parseGoalsFromNote(
     file: TFile, 
     content: string, 
-    frontmatter: any
+    frontmatter: GoalFrontmatter | null | undefined
 ): VaultMindGoal[] {
     const goals: VaultMindGoal[] = [];
     
     // 1. Check frontmatter for goals
     if (frontmatter) {
-        if (frontmatter.goal || frontmatter.goals) {
-            const goalData = frontmatter.goal || frontmatter.goals;
+        const goalData = frontmatter.goal || frontmatter.goals;
+        if (goalData) {
             if (typeof goalData === 'string') {
                 goals.push(createGoal(file, goalData, 'frontmatter'));
             } else if (Array.isArray(goalData)) {
@@ -105,7 +131,7 @@ export function parseGoalsFromNote(
     goals.forEach(goal => {
         // Parse milestones
         const milestonePattern = /- \[[ x]\] (?:Milestone:\s*)?(.+)/gi;
-        const milestones: any[] = [];
+        const milestones: Milestone[] = [];
         let milestoneMatch;
         
         // Look for milestones in the vicinity of the goal
@@ -117,9 +143,9 @@ export function parseGoalsFromNote(
             // Skip if it's a progress indicator
             if (!milestoneText.toLowerCase().startsWith('progress:')) {
                 milestones.push({
+                    id: `milestone-${Date.now()}-${milestones.length}`,
                     title: milestoneText,
                     completed: milestoneMatch[0].includes('[x]'),
-                    date: new Date()
                 });
             }
         }
@@ -155,10 +181,19 @@ function createGoal(
     file: TFile, 
     title: string, 
     type: string, 
-    metadata: any = {}
+    metadata: GoalData = {}
 ): VaultMindGoal {
     const id = `goal-${file.path}-${title.toLowerCase().replace(/\s+/g, '-')}`;
     
+    // Convert MilestoneData to Milestone
+    const milestones: Milestone[] = (metadata.milestones || []).map((m, index): Milestone => ({
+        id: m.id || `milestone-${index}`,
+        title: m.title || m.name || `Milestone ${index + 1}`,
+        completed: m.completed || false,
+        completedAt: m.completedAt ? new Date(m.completedAt) : undefined,
+        targetDate: m.targetDate ? new Date(m.targetDate) : undefined,
+    }));
+
     return {
         id,
         title,
@@ -168,7 +203,7 @@ function createGoal(
         progress: metadata.progress || 0,
         targetDate: metadata.targetDate ? new Date(metadata.targetDate) : undefined,
         completedAt: metadata.completedDate ? new Date(metadata.completedDate) : undefined,
-        milestones: metadata.milestones || [],
+        milestones,
         linkedTasks: [],
         file: null,
         filePath: file.path,

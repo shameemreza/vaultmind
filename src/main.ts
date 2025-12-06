@@ -54,14 +54,14 @@ export default class VaultMindPlugin extends Plugin {
 		this.addSettingTab(new BetterSettingsTab(this.app, this));
 
 		// Defer services initialization to not block startup
-		setTimeout(async () => {
+		void (async () => {
 			// Initialize core services
 			await this.initializeServices();
 
 			// Register additional commands
 			const { registerCommands } = await import("./commands");
 			registerCommands(this);
-		}, 50); // Reduced delay for faster initialization
+		})();
 
 		// Delay ribbon icons to ensure workspace is ready
 		// This matches how other successful plugins do it
@@ -70,7 +70,7 @@ export default class VaultMindPlugin extends Plugin {
 				// Dashboard icon
 				this.ribbonIcon = this.addRibbonIcon(
 					"brain",
-					"VaultMind Dashboard",
+					"Open dashboard",
 					async () => {
 						await this.openDashboard();
 					}
@@ -80,7 +80,7 @@ export default class VaultMindPlugin extends Plugin {
 				// Chat icon
 				const chatIcon = this.addRibbonIcon(
 					"message-circle",
-					"VaultMind AI Chat",
+					"Open AI chat",
 					async () => {
 						await this.openChat();
 					}
@@ -101,7 +101,7 @@ export default class VaultMindPlugin extends Plugin {
 		const scheduleIndexing = () => {
 			if ("requestIdleCallback" in window) {
 				window.requestIdleCallback(
-					async () => {
+					() => {
 						// Ensure services are initialized before indexing
 						if (!this.vaultIndexer) {
 							// Waiting for services
@@ -109,19 +109,19 @@ export default class VaultMindPlugin extends Plugin {
 							return;
 						}
 						// Auto-indexing vault
-						await this.indexVault();
+						void this.indexVault();
 					},
 					{ timeout: 10000 }
 				);
 			} else {
-				setTimeout(async () => {
+				setTimeout(() => {
 					if (!this.vaultIndexer) {
 						// Waiting for services
 						setTimeout(scheduleIndexing, 1000);
 						return;
 					}
 					// Auto-indexing vault
-					await this.indexVault();
+					void this.indexVault();
 				}, 5000);
 			}
 		};
@@ -130,7 +130,7 @@ export default class VaultMindPlugin extends Plugin {
 		// Plugin loaded successfully
 	}
 
-	async onunload() {
+	onunload(): void {
 		// Unloading plugin
 
 		// Stop background services
@@ -205,7 +205,7 @@ export default class VaultMindPlugin extends Plugin {
 		} catch {
 			// Service initialization failed
 			new Notice(
-				"VaultMind: Some features may be limited. Please restart Obsidian if issues persist."
+				"Some features may be limited. Please restart Obsidian if issues persist."
 			);
 		}
 	}
@@ -292,7 +292,7 @@ export default class VaultMindPlugin extends Plugin {
 		if (!this.ribbonIcon) {
 			this.ribbonIcon = this.addRibbonIcon(
 				"brain",
-				"Open VaultMind Dashboard",
+				"Open dashboard",
 				async () => {
 					await this.openDashboard();
 				}
@@ -306,11 +306,11 @@ export default class VaultMindPlugin extends Plugin {
 
 		// Make status bar clickable - opens dashboard
 		this.statusBarItem.addClass("vaultmind-status-bar-clickable");
-		this.statusBarItem.addEventListener("click", async (e: MouseEvent) => {
+		this.statusBarItem.addEventListener("click", (e: MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
 			// Opening dashboard
-			await this.openDashboard();
+			void this.openDashboard();
 		});
 
 		// Add right-click menu to status bar
@@ -320,62 +320,62 @@ export default class VaultMindPlugin extends Plugin {
 
 			const menu = new Menu();
 
-			menu.addItem((item) =>
-				item
-					.setTitle("Open Dashboard")
-					.setIcon("brain")
-					.onClick(async () => {
-						await this.openDashboard();
-					})
-			);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open dashboard")
+				.setIcon("brain")
+				.onClick(async () => {
+					await this.openDashboard();
+				})
+		);
 
-			menu.addItem((item) =>
-				item
-					.setTitle("Index Vault")
-					.setIcon("refresh-cw")
-					.onClick(async () => {
-						await this.indexVault();
-					})
-			);
+		menu.addItem((item) =>
+			item
+				.setTitle("Index vault")
+				.setIcon("refresh-cw")
+				.onClick(async () => {
+					await this.indexVault();
+				})
+		);
 
-			menu.addItem((item) =>
-				item
-					.setTitle("Open AI Chat")
-					.setIcon("message-circle")
-					.onClick(async () => {
-						await this.openChat();
-					})
-			);
+		menu.addItem((item) =>
+			item
+				.setTitle("Open AI chat")
+				.setIcon("message-circle")
+				.onClick(async () => {
+					await this.openChat();
+				})
+		);
 
-			menu.addSeparator();
+		menu.addSeparator();
 
-			menu.addItem((item) =>
-				item
-					.setTitle("Start Time Tracking")
-					.setIcon("clock")
-					.onClick(async () => {
-						if (!this.timeTracker.getActiveEntry()) {
-							await this.timeTracker.startTracking(
-								"Work Session"
-							);
-							new Notice("Time tracking started");
-							this.updateStatusBar();
-						}
-					})
-			);
+		menu.addItem((item) =>
+			item
+				.setTitle("Start time tracking")
+				.setIcon("clock")
+				.onClick(async () => {
+					if (!this.timeTracker.getActiveEntry()) {
+						await this.timeTracker.startTracking(
+							"Work Session"
+						);
+						new Notice("Time tracking started");
+						this.updateStatusBar();
+					}
+				})
+		);
 
-			menu.addItem((item) =>
-				item
-					.setTitle("Stop Time Tracking")
-					.setIcon("clock")
-					.onClick(async () => {
-						if (this.timeTracker.getActiveEntry()) {
-							await this.timeTracker.stopTracking();
-							new Notice("Time tracking stopped");
-							this.updateStatusBar();
-						}
-					})
-			);
+		menu.addItem((item) =>
+			item
+				.setTitle("Stop time tracking")
+				.setIcon("clock")
+				.onClick(async () => {
+					if (this.timeTracker.getActiveEntry()) {
+						await this.timeTracker.stopTracking();
+						new Notice("Time tracking stopped");
+						this.updateStatusBar();
+					}
+				})
+		);
 
 			menu.addSeparator();
 
@@ -440,20 +440,20 @@ export default class VaultMindPlugin extends Plugin {
 						"VaultMind: All tasks completed!"
 					);
 				}
-			} else {
-				this.statusBarItem.setText("VaultMind");
-				this.statusBarItem.setAttr(
-					"title",
-					"VaultMind: Click for dashboard, right-click for menu"
-				);
-			}
-		} catch {
-			this.statusBarItem.setText("VaultMind");
+		} else {
+			this.statusBarItem.setText("Ready");
 			this.statusBarItem.setAttr(
 				"title",
-				"VaultMind: Click for dashboard"
+				"Click for dashboard, right-click for menu"
 			);
 		}
+	} catch {
+		this.statusBarItem.setText("Ready");
+		this.statusBarItem.setAttr(
+			"title",
+			"Click for dashboard"
+		);
+	}
 	}
 
 	async openChat() {
@@ -464,7 +464,7 @@ export default class VaultMindPlugin extends Plugin {
 
 		if (leaves.length > 0) {
 			// Chat view already exists, reveal it
-			workspace.revealLeaf(leaves[0]);
+			await workspace.revealLeaf(leaves[0]);
 		} else {
 			// Create new chat view in right sidebar
 			leaf = workspace.getRightLeaf(false);
@@ -473,7 +473,7 @@ export default class VaultMindPlugin extends Plugin {
 					type: CHAT_VIEW_TYPE,
 					active: true,
 				});
-				workspace.revealLeaf(leaf);
+				await workspace.revealLeaf(leaf);
 			}
 		}
 	}
@@ -504,7 +504,7 @@ export default class VaultMindPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			await workspace.revealLeaf(leaf);
 			// Trigger a refresh after opening
 			const view = leaf.view as DashboardView;
 			if (view && view.refresh) {
@@ -572,12 +572,12 @@ export default class VaultMindPlugin extends Plugin {
 			// Refresh dashboard if open
 			const leaves =
 				this.app.workspace.getLeavesOfType(VIEW_TYPE_DASHBOARD);
-			leaves.forEach((leaf) => {
+			for (const leaf of leaves) {
 				const view = leaf.view as DashboardView;
 				if (view && typeof view.refresh === "function") {
-					view.refresh();
+					await view.refresh();
 				}
-			});
+			}
 		} catch {
 			// Indexing failed
 			new Notice(
@@ -592,27 +592,27 @@ export default class VaultMindPlugin extends Plugin {
 	 */
 	async updateAIProvider() {
 		if (this.aiManager) {
-			await this.aiManager.updateSettings(this.settings);
+			this.aiManager.updateSettings(this.settings);
 			this.aiProvider = await this.aiManager.getProvider();
 
 			// Show status based on provider
-			if (this.aiProvider) {
-				const provider = this.settings.aiProvider;
-				if (provider === "openai" && this.settings.openAIApiKey) {
-					new Notice("✓ OpenAI connected");
-				} else if (
-					provider === "anthropic" &&
-					this.settings.claudeApiKey
-				) {
-					new Notice("✓ Claude connected");
-				} else if (provider === "ollama") {
-					new Notice("✓ Ollama connected");
-				} else if (provider) {
-					new Notice("✓ AI provider connected");
-				}
-			} else if (this.settings.aiProvider !== "none") {
-				new Notice("AI provider not configured");
+		if (this.aiProvider) {
+			const provider = this.settings.aiProvider;
+			if (provider === "openai" && this.settings.openAIApiKey) {
+				new Notice("OpenAI connected");
+			} else if (
+				provider === "anthropic" &&
+				this.settings.claudeApiKey
+			) {
+				new Notice("Claude connected");
+			} else if (provider === "ollama") {
+				new Notice("Ollama connected");
+			} else if (provider) {
+				new Notice("AI provider connected");
 			}
+		} else if (this.settings.aiProvider !== "none") {
+			new Notice("AI provider not configured");
+		}
 
 			new Notice("AI provider updated successfully");
 		}
@@ -623,7 +623,7 @@ export default class VaultMindPlugin extends Plugin {
 	 */
 	async testAIConnection(): Promise<boolean> {
 		if (!this.aiManager) {
-			new Notice("✗ AI Manager not initialized");
+			new Notice("AI manager not initialized");
 			return false;
 		}
 
@@ -634,11 +634,11 @@ export default class VaultMindPlugin extends Plugin {
 			const provider = this.settings.aiProvider;
 			if (provider === "none") {
 				new Notice(
-					"✗ No AI provider selected. Please select one in settings."
+					"No AI provider selected. Please select one in settings."
 				);
 			} else {
 				new Notice(
-					`✗ ${provider} provider not configured. Check your API key.`
+					`${provider} provider not configured. Check your API key.`
 				);
 			}
 			return false;
@@ -646,50 +646,209 @@ export default class VaultMindPlugin extends Plugin {
 
 		const result = await this.aiManager.testConnection();
 		if (result) {
-			new Notice("✓ AI connection successful");
+			new Notice("AI connection successful");
 		} else {
 			const provider = this.settings.aiProvider;
 			new Notice(
-				`✗ ${provider} connection failed. Check your API key and settings.`
+				`${provider} connection failed. Check your API key and settings.`
 			);
 		}
 		return result;
 	}
 
-	async generateDailySummary(): Promise<string> {
-		// Simplified version without AI for now
-		const tasks = this.taskEngine?.getTasks() || [];
-		const tasksCompleted = tasks.filter((t) => t.completed).length;
-		const tasksTotal = tasks.length;
+	generateDailySummary(): string {
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const todayStr = now.toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
 
-		const summary = `# Daily Summary - ${new Date().toLocaleDateString()}
+		// Get all tasks
+		const allTasks = this.taskEngine?.getTasks() || [];
 
-## Task Statistics
-- Total Tasks: ${tasksTotal}
-- Completed: ${tasksCompleted}
-- Completion Rate: ${
-			tasksTotal > 0
-				? ((tasksCompleted / tasksTotal) * 100).toFixed(1)
-				: 0
-		}%
+		// Tasks completed today (check completedAt date)
+		const completedToday = allTasks.filter((t) => {
+			if (!t.completed || !t.completedAt) return false;
+			const completedDate = new Date(t.completedAt);
+			return completedDate >= today;
+		});
 
-## Notes
-- Use the AI Chat for intelligent assistance
-- Use the dashboard for detailed statistics
-`;
+		// Tasks due today (pending)
+		const dueToday = allTasks.filter((t) => {
+			if (t.completed || !t.dueDate) return false;
+			const dueDate = new Date(t.dueDate);
+			return (
+				dueDate.getFullYear() === today.getFullYear() &&
+				dueDate.getMonth() === today.getMonth() &&
+				dueDate.getDate() === today.getDate()
+			);
+		});
+
+		// Overdue tasks
+		const overdue = allTasks.filter((t) => {
+			if (t.completed || !t.dueDate) return false;
+			const dueDate = new Date(t.dueDate);
+			return dueDate < today;
+		});
+
+		// High priority pending tasks
+		const highPriority = allTasks.filter(
+			(t) => !t.completed && t.priority === "high"
+		);
+
+		// Time tracking stats
+		const timeStats = this.timeTracker?.getStatistics();
+		const todayMinutes = timeStats?.todayTotal || 0;
+		const todayHours = Math.floor(todayMinutes / 60);
+		const todayMins = todayMinutes % 60;
+
+		// Get recently modified notes (last 24 hours)
+		const recentFiles = this.app.vault
+			.getMarkdownFiles()
+			.filter((f) => {
+				const mtime = new Date(f.stat.mtime);
+				return mtime >= today;
+			})
+			.sort((a, b) => b.stat.mtime - a.stat.mtime)
+			.slice(0, 5);
+
+		// Goals progress
+		const goals = this.goalEngine?.getGoals() || [];
+		const activeGoals = goals.filter((g) => g.status === "active");
+
+		// Build the summary
+		let summary = `# 📅 Daily Summary - ${todayStr}\n\n`;
+
+		// Today's highlights
+		summary += `## 🎯 Today's Highlights\n\n`;
+		summary += `| Metric | Count |\n`;
+		summary += `|--------|-------|\n`;
+		summary += `| ✅ Tasks completed today | ${completedToday.length} |\n`;
+		summary += `| 📌 Tasks due today | ${dueToday.length} |\n`;
+		summary += `| ⚠️ Overdue tasks | ${overdue.length} |\n`;
+		summary += `| 🔴 High priority pending | ${highPriority.length} |\n`;
+		if (todayMinutes > 0) {
+			summary += `| ⏱️ Time tracked | ${todayHours}h ${todayMins}m |\n`;
+		}
+		summary += `\n`;
+
+		// Tasks completed today
+		if (completedToday.length > 0) {
+			summary += `## ✅ Completed Today (${completedToday.length})\n\n`;
+			completedToday.slice(0, 10).forEach((t) => {
+				const cleanContent = t.content
+					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
+					.replace(/[⏫🔼🔽]/g, "")
+					.trim();
+				summary += `- [x] ${cleanContent}\n`;
+			});
+			if (completedToday.length > 10) {
+				summary += `- *...and ${completedToday.length - 10} more*\n`;
+			}
+			summary += `\n`;
+		}
+
+		// Tasks due today
+		if (dueToday.length > 0) {
+			summary += `## 📌 Due Today (${dueToday.length})\n\n`;
+			dueToday.forEach((t) => {
+				const cleanContent = t.content
+					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
+					.replace(/[⏫🔼🔽]/g, "")
+					.trim();
+				const priority =
+					t.priority === "high"
+						? "🔴"
+						: t.priority === "medium"
+							? "🟡"
+							: "🟢";
+				summary += `- [ ] ${priority} ${cleanContent}\n`;
+			});
+			summary += `\n`;
+		}
+
+		// Overdue tasks (if any)
+		if (overdue.length > 0) {
+			summary += `## ⚠️ Overdue (${overdue.length})\n\n`;
+			overdue.slice(0, 5).forEach((t) => {
+				const cleanContent = t.content
+					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
+					.replace(/[⏫🔼🔽]/g, "")
+					.trim();
+				const daysOverdue = Math.floor(
+					(today.getTime() - new Date(t.dueDate!).getTime()) /
+						(1000 * 60 * 60 * 24)
+				);
+				summary += `- [ ] ${cleanContent} *(${daysOverdue} days overdue)*\n`;
+			});
+			if (overdue.length > 5) {
+				summary += `- *...and ${overdue.length - 5} more overdue tasks*\n`;
+			}
+			summary += `\n`;
+		}
+
+		// High priority tasks
+		if (highPriority.length > 0 && completedToday.length === 0) {
+			summary += `## 🔴 High Priority\n\n`;
+			highPriority.slice(0, 5).forEach((t) => {
+				const cleanContent = t.content
+					.replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "")
+					.replace(/[⏫🔼🔽]/g, "")
+					.trim();
+				summary += `- [ ] ${cleanContent}\n`;
+			});
+			summary += `\n`;
+		}
+
+		// Active goals progress
+		if (activeGoals.length > 0) {
+			summary += `## 🎯 Goals Progress\n\n`;
+			activeGoals.slice(0, 5).forEach((g) => {
+				const progressBar = this.createProgressBar(g.progress);
+				summary += `- **${g.title}** ${progressBar} ${g.progress}%\n`;
+			});
+			summary += `\n`;
+		}
+
+		// Recently modified notes
+		if (recentFiles.length > 0) {
+			summary += `## 📝 Notes Modified Today\n\n`;
+			recentFiles.forEach((f) => {
+				const mtime = new Date(f.stat.mtime);
+				const timeStr = mtime.toLocaleTimeString("en-US", {
+					hour: "2-digit",
+					minute: "2-digit",
+				});
+				summary += `- [[${f.basename}]] *(${timeStr})*\n`;
+			});
+			summary += `\n`;
+		}
+
+		// Daily insight
+		summary += `---\n\n`;
+		summary += `*Generated at ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}*\n`;
 
 		return summary;
 	}
 
+	private createProgressBar(progress: number): string {
+		const filled = Math.round(progress / 10);
+		const empty = 10 - filled;
+		return `[${"█".repeat(filled)}${"░".repeat(empty)}]`;
+	}
+
 	async askQuestion(question: string): Promise<string> {
 		if (this.aiProvider) {
-			const context = await this.buildQuickContext();
+			const context = this.buildQuickContext();
 			return await this.aiProvider.answerQuestion(question, context);
 		}
 		return "Please configure an AI provider in settings to use this feature.";
 	}
 
-	private async buildQuickContext(): Promise<string> {
+	private buildQuickContext(): string {
 		const tasks = this.taskEngine.getTasks();
 		const goals = this.goalEngine.getGoals();
 		return `Tasks: ${tasks.length} total, ${

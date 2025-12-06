@@ -21,8 +21,8 @@ export class Scheduler {
 		if (this.plugin.settings.enableAutoIndex) {
 			const indexInterval =
 				this.plugin.settings.indexInterval * 60 * 1000;
-			const indexTimer = setInterval(async () => {
-				await this.plugin.vaultIndexer.indexVault();
+			const indexTimer = setInterval(() => {
+				void this.plugin.vaultIndexer.indexVault();
 			}, indexInterval);
 			this.intervals.set("index", indexTimer);
 		}
@@ -68,7 +68,7 @@ export class Scheduler {
 				now.getHours() === time.hours &&
 				now.getMinutes() === time.minutes
 			) {
-				this.generateDailyReport();
+				void this.generateDailyReport();
 			}
 		};
 
@@ -84,7 +84,7 @@ export class Scheduler {
 				now.getDay() === this.plugin.settings.weeklyReviewDay &&
 				now.getHours() === 9
 			) {
-				this.generateWeeklyReview();
+				void this.generateWeeklyReview();
 			}
 		};
 

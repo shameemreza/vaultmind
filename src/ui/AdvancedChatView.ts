@@ -77,7 +77,7 @@ export class AdvancedChatView extends ItemView {
 	}
 
 	getDisplayText() {
-		return "VaultMind AI Chat";
+		return "AI chat";
 	}
 
 	getIcon() {
@@ -107,12 +107,12 @@ export class AdvancedChatView extends ItemView {
 			});
 			this.updateSessionSelector();
 
-			this.sessionSelectEl.addEventListener("change", () => {
-				const value = this.sessionSelectEl.value;
-				if (value && value !== "" && value !== "actions") {
-					this.switchSession(value);
-				}
-			});
+		this.sessionSelectEl.addEventListener("change", () => {
+			const value = this.sessionSelectEl.value;
+			if (value && value !== "" && value !== "actions") {
+				void this.switchSession(value);
+			}
+		});
 
 			// Session action buttons
 			const sessionActions = sessionControl.createEl("div", {
@@ -197,12 +197,15 @@ export class AdvancedChatView extends ItemView {
 				},
 			});
 
-			// Auto-resize and keyboard shortcuts
-			this.inputEl.addEventListener("input", () => {
-				this.inputEl.style.height = "auto";
-				this.inputEl.style.height =
-					Math.min(this.inputEl.scrollHeight, 200) + "px";
+		// Auto-resize and keyboard shortcuts
+		this.inputEl.addEventListener("input", () => {
+			this.inputEl.setCssProps({
+				"--input-height": "auto",
 			});
+			this.inputEl.setCssProps({
+				"--input-height": Math.min(this.inputEl.scrollHeight, 200) + "px",
+			});
+		});
 
 			this.inputEl.addEventListener("keydown", (e) => {
 				if (e.key === "Enter" && !e.shiftKey) {
@@ -225,10 +228,10 @@ export class AdvancedChatView extends ItemView {
 				this.updateContextIndicator();
 			}
 
-			// Show welcome message
-			if (this.messages.length === 0) {
-				this.addWelcomeMessage();
-			}
+		// Show welcome message
+		if (this.messages.length === 0) {
+			void this.addWelcomeMessage();
+		}
 
 			console.debug("VaultMind Chat: UI initialized successfully");
 		} catch (error) {
@@ -246,7 +249,7 @@ export class AdvancedChatView extends ItemView {
 		const header = container.createEl("div", {
 			cls: "vaultmind-chat-header",
 		});
-		header.createEl("h3", { text: "VaultMind Chat" });
+		header.createEl("h3", { text: "Chat" });
 
 		// Add basic controls
 		const controls = header.createEl("div", {
@@ -271,7 +274,7 @@ export class AdvancedChatView extends ItemView {
 		// Add a simple welcome message
 		if (this.messages.length === 0) {
 			this.messages = [];
-			this.addWelcomeMessage();
+			void this.addWelcomeMessage();
 		}
 
 		// Input area
@@ -290,7 +293,7 @@ export class AdvancedChatView extends ItemView {
 		this.inputEl.addEventListener("keydown", (e) => {
 			if (e.key === "Enter" && !e.shiftKey) {
 				e.preventDefault();
-				this.sendMessage();
+				void this.sendMessage();
 			}
 		});
 
@@ -298,7 +301,7 @@ export class AdvancedChatView extends ItemView {
 			cls: "vaultmind-chat-send-button",
 			text: "Send",
 		});
-		this.sendBtn.addEventListener("click", () => this.sendMessage());
+		this.sendBtn.addEventListener("click", () => void this.sendMessage());
 
 		console.debug(
 			"VaultMind Chat: Fallback UI created with basic functionality"
@@ -345,7 +348,9 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 
 		// Clear input
 		this.inputEl.value = "";
-		this.inputEl.style.height = "auto";
+		this.inputEl.setCssProps({
+			"--input-height": "auto",
+		});
 
 		// Disable while processing
 		this.setProcessing(true);
@@ -828,9 +833,9 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 						if (snippet) {
 							response += `  > ${snippet}\n`;
 						}
-					} catch (error) {
-						console.error("Failed to read file:", result.path);
-					}
+				} catch {
+					console.error("Failed to read file:", result.path);
+				}
 				}
 				response += "\n";
 			}
@@ -868,7 +873,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 			}
 		} else {
 			// Provide vault overview
-			return await this.generateVaultSummary();
+			return this.generateVaultSummary();
 		}
 	}
 
@@ -1224,7 +1229,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 								""
 							);
 						if (file) {
-							this.plugin.app.workspace.openLinkText(
+							void this.plugin.app.workspace.openLinkText(
 								href,
 								"",
 								false
@@ -1365,7 +1370,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 		// Clear messages and show welcome immediately
 		if (this.messagesEl) {
 			this.messagesEl.empty();
-			this.addWelcomeMessage();
+			void this.addWelcomeMessage();
 		}
 
 		if (this.sessionSelectEl) {
@@ -1386,12 +1391,12 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 				this.saveSessions();
 
 				// Switch to another session or create new
-				if (this.sessions.size > 0) {
-					const nextSession = Array.from(this.sessions.keys())[0];
-					this.switchSession(nextSession);
-				} else {
-					this.createNewSession();
-				}
+			if (this.sessions.size > 0) {
+				const nextSession = Array.from(this.sessions.keys())[0];
+				void this.switchSession(nextSession);
+			} else {
+				this.createNewSession();
+			}
 			},
 			"Delete",
 			"Cancel"
@@ -1492,7 +1497,7 @@ Use the paperclip button to attach specific files/folders, or I'll search your e
 	private clearCurrentSession() {
 		this.messages = [];
 		this.messagesEl.empty();
-		this.addWelcomeMessage();
+		void this.addWelcomeMessage();
 		this.saveCurrentSession();
 	}
 
@@ -1675,8 +1680,8 @@ class AdvancedAttachModal extends Modal {
 					cls: "selectable-item",
 				});
 				const checkbox = fileEl.createEl("input", {
-					type: "checkbox",
-				}) as HTMLInputElement;
+					attr: { type: "checkbox" },
+				});
 				checkbox.checked = this.selectedFiles.has(file);
 				fileEl.createEl("span", { text: file.basename });
 				fileEl.createEl("span", {
@@ -1711,8 +1716,8 @@ class AdvancedAttachModal extends Modal {
 					cls: "selectable-item",
 				});
 				const checkbox = folderEl.createEl("input", {
-					type: "checkbox",
-				}) as HTMLInputElement;
+					attr: { type: "checkbox" },
+				});
 				checkbox.checked = this.selectedFolders.has(folder);
 				folderEl.createEl("span", { text: folder.path });
 
@@ -1849,12 +1854,14 @@ class VaultSearchModal extends Modal {
 
 		searchInput.focus();
 
-		searchInput.addEventListener("keypress", async (e) => {
+		searchInput.addEventListener("keypress", (e) => {
 			if (e.key === "Enter") {
 				const query = searchInput.value.trim();
 				if (query) {
-					await this.onSearch(query);
-					this.close();
+					void (async () => {
+						await this.onSearch(query);
+						this.close();
+					})();
 				}
 			}
 		});
@@ -1868,11 +1875,13 @@ class VaultSearchModal extends Modal {
 			cls: "mod-cta",
 		});
 
-		searchBtn.addEventListener("click", async () => {
+		searchBtn.addEventListener("click", () => {
 			const query = searchInput.value.trim();
 			if (query) {
-				await this.onSearch(query);
-				this.close();
+				void (async () => {
+					await this.onSearch(query);
+					this.close();
+				})();
 			}
 		});
 

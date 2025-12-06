@@ -32,7 +32,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
     // Generate daily summary command
     plugin.addCommand({
         id: 'generate-daily-summary',
-        name: 'Generate Daily Summary',
+        name: 'Generate daily summary',
         callback: async () => {
             const summary = await plugin.generateDailySummary();
             if (summary) {
@@ -146,7 +146,7 @@ export function registerCommands(plugin: VaultMindPlugin): void {
             }
             
             try {
-                new Notice('Testing Ollama...');
+                new Notice('Testing Ollama…');
                 
                 // Test with a simple prompt
                 const testPrompt = 'Say "Hello from Ollama" if you can see this message.';

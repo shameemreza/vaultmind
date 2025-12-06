@@ -23,12 +23,23 @@ export class GoalEngine implements IGoalEngine {
         const index = this.vaultIndexer.getIndex();
         this.goals.clear();
         
-        // Get all goals from the index
+        // Get all goals from the index, filtering out stale goals
         for (const goal of index.goals.values()) {
-            this.goals.set(goal.id, goal);
+            // Only add goals whose source file still exists
+            if (goal.filePath && this.app) {
+                const file = this.app.vault.getAbstractFileByPath(goal.filePath);
+                if (file) {
+                    this.goals.set(goal.id, goal);
+                } else {
+                    console.debug(`VaultMind: Removing stale goal "${goal.title}" - source file not found: ${goal.filePath}`);
+                }
+            } else if (!goal.filePath) {
+                // Goals without file path are kept (might be programmatically created)
+                this.goals.set(goal.id, goal);
+            }
         }
         
-        console.debug(`VaultMind: Found ${this.goals.size} goals`);
+        console.debug(`VaultMind: Found ${this.goals.size} valid goals`);
         return Promise.resolve(Array.from(this.goals.values()));
     }
 
@@ -66,9 +77,9 @@ export class GoalEngine implements IGoalEngine {
         if (goal.linkedTasks.length > 0) {
             const tasks = goal.linkedTasks
                 .map(taskId => this.taskEngine.getTask(taskId))
-                .filter(task => task !== undefined);
+                .filter((task): task is NonNullable<typeof task> => task !== undefined);
             
-            const completed = tasks.filter(t => t!.completed).length;
+            const completed = tasks.filter(t => t.completed).length;
             return tasks.length > 0 ? (completed / tasks.length) * 100 : 0;
         }
         

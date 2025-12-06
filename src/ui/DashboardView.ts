@@ -32,7 +32,7 @@ export class DashboardView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "VaultMind Dashboard";
+		return "Dashboard";
 	}
 
 	getIcon(): string {
@@ -57,7 +57,7 @@ export class DashboardView extends ItemView {
 		setIcon(iconEl, "brain");
 
 		const titleEl = titleContainer.createEl("h2", {
-			text: "VaultMind Dashboard",
+			text: "Dashboard",
 		});
 
 		// Add last updated time
@@ -87,7 +87,7 @@ export class DashboardView extends ItemView {
 			}
 		});
 
-		refreshBtn.addEventListener("click", async (e) => {
+		refreshBtn.addEventListener("click", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 
@@ -105,30 +105,32 @@ export class DashboardView extends ItemView {
 			refreshBtn.addClass("vaultmind-disabled");
 			refreshBtn.addClass("vaultmind-spinning");
 
-			try {
-				// Starting vault index
-				// Re-index vault first
-				await this.plugin.indexVault();
+			void (async () => {
+				try {
+					// Starting vault index
+					// Re-index vault first
+					await this.plugin.indexVault();
 
-				// Wait a bit for indexing to complete
-				await new Promise((resolve) => setTimeout(resolve, 500));
+					// Wait a bit for indexing to complete
+					await new Promise((resolve) => setTimeout(resolve, 500));
 
-				// Refreshing dashboard
-				// Refresh the entire dashboard
-				await this.refresh();
+					// Refreshing dashboard
+					// Refresh the entire dashboard
+					await this.refresh();
 
-				new Notice("Dashboard refreshed!");
-				// Dashboard refreshed
-			} catch {
-				// Refresh failed
-				new Notice("Unable to refresh dashboard. Please try again.");
-			} finally {
-				// Re-enable button
-				isRefreshing = false;
-				refreshBtn.setText("Refresh");
-				refreshBtn.removeClass("vaultmind-disabled");
-				refreshBtn.removeClass("vaultmind-spinning");
-			}
+					new Notice("Dashboard refreshed!");
+					// Dashboard refreshed
+				} catch {
+					// Refresh failed
+					new Notice("Unable to refresh dashboard. Please try again.");
+				} finally {
+					// Re-enable button
+					isRefreshing = false;
+					refreshBtn.setText("Refresh");
+					refreshBtn.removeClass("vaultmind-disabled");
+					refreshBtn.removeClass("vaultmind-spinning");
+				}
+			})();
 		});
 
 		// Create dashboard sections
@@ -260,13 +262,13 @@ export class DashboardView extends ItemView {
 		if (this.refreshInterval) {
 			window.clearInterval(this.refreshInterval);
 		}
-		this.refreshInterval = window.setInterval(async () => {
+		this.refreshInterval = window.setInterval(() => {
 			// Auto-refreshing
-			await this.refresh();
+			void this.refresh();
 		}, 5 * 60 * 1000); // 5 minutes
 	}
 
-	async onClose() {
+	async onClose(): Promise<void> {
 		// Clean up auto-refresh
 		if (this.refreshInterval) {
 			window.clearInterval(this.refreshInterval);
@@ -276,6 +278,7 @@ export class DashboardView extends ItemView {
 			window.clearInterval(this.timeUpdateInterval);
 			this.timeUpdateInterval = null;
 		}
+		await Promise.resolve();
 	}
 
 	async refresh() {
@@ -389,7 +392,15 @@ export class DashboardView extends ItemView {
 			realTasks.length > 0
 				? realTasks
 				: this.plugin.taskEngine.getTasks();
-		const goals = this.plugin.goalEngine.getGoals();
+		const allGoals = this.plugin.goalEngine.getGoals();
+		
+		// Filter out stale goals whose source files no longer exist
+		const validGoals = allGoals.filter((g) => {
+			if (!g.filePath) return false;
+			const file = this.plugin.app.vault.getAbstractFileByPath(g.filePath);
+			return file !== null;
+		});
+		
 		const timeStats = this.plugin.timeTracker.getStatistics();
 		const notifications =
 			this.plugin.notificationService.getNotifications(true);
@@ -425,7 +436,7 @@ export class DashboardView extends ItemView {
 				projects: Array.from(projects), // All projects found
 			},
 			goals: {
-				active: goals.filter((g) => g.status === "active").slice(0, 5),
+				active: validGoals.filter((g) => g.status === "active").slice(0, 5),
 				recentProgress: {},
 			},
 			time: {
@@ -442,7 +453,7 @@ export class DashboardView extends ItemView {
 						new Date(t.completedAt).toDateString() ===
 							today.toDateString()
 				).length,
-				goalsOnTrack: goals.filter((g) => g.progress >= 50).length,
+				goalsOnTrack: validGoals.filter((g) => g.progress >= 50).length,
 				currentStreak: 0, // TODO: Calculate streak
 				productivityScore: 0, // TODO: Calculate score
 			},
@@ -514,59 +525,62 @@ export class DashboardView extends ItemView {
 
 			// Add checkbox
 			const checkbox = li.createEl("input", {
-				type: "checkbox",
+				attr: { type: "checkbox" },
 				cls: "task-checkbox",
-			}) as HTMLInputElement;
-			checkbox.checked = task.completed || false;
+			});
+			(checkbox as HTMLInputElement).checked = task.completed || false;
 			checkbox.addClass("vaultmind-checkbox");
 			checkbox.addClass("vaultmind-checkbox-wrapper");
 			checkbox.addClass("vaultmind-flex-shrink-0");
 
 			// Handle checkbox click
-			checkbox.addEventListener("click", async (e) => {
+			checkbox.addEventListener("click", (e) => {
 				e.stopPropagation();
+				const isChecked = (checkbox as HTMLInputElement).checked;
 				// Toggle task completion
 
-				// If task was being tracked and is now completed, stop tracking
-				const activeEntry = this.plugin.timeTracker.getActiveEntry();
-				if (
-					activeEntry &&
-					activeEntry.description === task.content &&
-					!checkbox.checked
-				) {
-					await this.plugin.timeTracker.stopTracking();
-					new Notice("Time tracking stopped (task completed)");
-				}
+				void (async () => {
+					// If task was being tracked and is now completed, stop tracking
+					const activeEntry = this.plugin.timeTracker.getActiveEntry();
+					if (
+						activeEntry &&
+						activeEntry.description === task.content &&
+						!isChecked
+					) {
+						await this.plugin.timeTracker.stopTracking();
+						new Notice("Time tracking stopped (task completed)");
+					}
 
-				// Update task in file
-				if (task.filePath) {
-					const file = this.plugin.app.vault.getAbstractFileByPath(
-						task.filePath
-					);
-					if (file && file instanceof TFile) {
-						const content = await this.plugin.app.vault.read(file);
-						const lines = content.split("\n");
-						if (lines[task.line]) {
-							// Toggle the checkbox in the file
-							lines[task.line] = lines[task.line].replace(
-								/- \[([ x])\]/,
-								checkbox.checked ? "- [x]" : "- [ ]"
-							);
-							await this.plugin.app.vault.modify(
-								file,
-								lines.join("\n")
-							);
-							new Notice(
-								checkbox.checked
-									? "Task completed!"
-									: "Task uncompleted"
-							);
+					// Update task in file
+					if (task.filePath) {
+						const file = this.plugin.app.vault.getAbstractFileByPath(
+							task.filePath
+						);
+						if (file && file instanceof TFile) {
+							const content = await this.plugin.app.vault.read(file);
+							const lines = content.split("\n");
+							if (lines[task.line]) {
+								// Toggle the checkbox in the file
+								lines[task.line] = lines[task.line].replace(
+									/- \[([ x])\]/,
+									isChecked ? "- [x]" : "- [ ]"
+								);
+								await this.plugin.app.vault.modify(
+									file,
+									lines.join("\n")
+								);
+								new Notice(
+									isChecked
+										? "Task completed!"
+										: "Task uncompleted"
+								);
 
-							// Refresh dashboard
-							setTimeout(() => this.refresh(), 500);
+								// Refresh dashboard
+								setTimeout(() => void this.refresh(), 500);
+							}
 						}
 					}
-				}
+				})();
 			});
 
 			// Add priority badge if task has priority
@@ -626,62 +640,64 @@ export class DashboardView extends ItemView {
 			// Make task clickable to open the file
 			if (task.filePath && task.filePath.trim() !== "") {
 				// Task has file path
-				taskContentEl.addEventListener("click", async (e) => {
+				taskContentEl.addEventListener("click", (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					// Opening task file
-					const file = this.plugin.app.vault.getAbstractFileByPath(
-						task.filePath
-					);
-					if (file && file instanceof TFile) {
-						const leaf = this.plugin.app.workspace.getLeaf(false);
-						await leaf.openFile(file);
-						// Move cursor to the task line if possible
-						const view = leaf.view;
-						if (
-							view &&
-							"editor" in view &&
-							task.line !== undefined
-						) {
-							const editor = (
-								view as {
-									editor: {
-										setCursor: (pos: {
-											line: number;
-											ch: number;
-										}) => void;
-										scrollIntoView: (
-											range: {
-												from: {
-													line: number;
-													ch: number;
-												};
-												to: {
-													line: number;
-													ch: number;
-												};
-											},
-											center: boolean
-										) => void;
-									};
-								}
-							).editor;
-							editor.setCursor({ line: task.line, ch: 0 });
-							editor.scrollIntoView(
-								{
-									from: { line: task.line, ch: 0 },
-									to: { line: task.line, ch: 0 },
-								},
-								true
-							);
-						}
-					} else {
-						console.error(
-							"VaultMind: File not found:",
+					void (async () => {
+						const file = this.plugin.app.vault.getAbstractFileByPath(
 							task.filePath
 						);
-						new Notice(`Could not open file: ${task.filePath}`);
-					}
+						if (file && file instanceof TFile) {
+							const leaf = this.plugin.app.workspace.getLeaf(false);
+							await leaf.openFile(file);
+							// Move cursor to the task line if possible
+							const view = leaf.view;
+							if (
+								view &&
+								"editor" in view &&
+								task.line !== undefined
+							) {
+								const editor = (
+									view as {
+										editor: {
+											setCursor: (pos: {
+												line: number;
+												ch: number;
+											}) => void;
+											scrollIntoView: (
+												range: {
+													from: {
+														line: number;
+														ch: number;
+													};
+													to: {
+														line: number;
+														ch: number;
+													};
+												},
+												center: boolean
+											) => void;
+										};
+									}
+								).editor;
+								editor.setCursor({ line: task.line, ch: 0 });
+								editor.scrollIntoView(
+									{
+										from: { line: task.line, ch: 0 },
+										to: { line: task.line, ch: 0 },
+									},
+									true
+								);
+							}
+						} else {
+							console.error(
+								"VaultMind: File not found:",
+								task.filePath
+							);
+							new Notice(`Could not open file: ${task.filePath}`);
+						}
+					})();
 				});
 				taskContentEl.addClass("vaultmind-task-content");
 			} else {
@@ -963,17 +979,19 @@ export class DashboardView extends ItemView {
 			// Add click handler to open the source file
 			if (goal.filePath) {
 				titleEl.addClass("vaultmind-goal-clickable");
-				titleEl.addEventListener("click", async () => {
-					const file = this.plugin.app.vault.getAbstractFileByPath(
-						goal.filePath
-					);
-					if (file && file instanceof TFile) {
-						const leaf = this.plugin.app.workspace.getLeaf(false);
-						await leaf.openFile(file);
-						new Notice(`Opened goal: ${goal.title}`);
-					} else {
-						new Notice("Goal source file not found");
-					}
+				titleEl.addEventListener("click", () => {
+					void (async () => {
+						const file = this.plugin.app.vault.getAbstractFileByPath(
+							goal.filePath
+						);
+						if (file && file instanceof TFile) {
+							const leaf = this.plugin.app.workspace.getLeaf(false);
+							await leaf.openFile(file);
+							new Notice(`Opened goal: ${goal.title}`);
+						} else {
+							new Notice("Goal source file not found");
+						}
+					})();
 				});
 				// Hover effects handled by CSS
 			} else {
@@ -1073,26 +1091,28 @@ export class DashboardView extends ItemView {
 			stopBtn.addClass("vaultmind-interactive-btn");
 
 			// Use addEventListener for better compatibility
-			stopBtn.addEventListener("click", async (e) => {
+			stopBtn.addEventListener("click", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				console.debug("Stop tracking button clicked");
-				try {
-					await this.plugin.timeTracker.stopTracking();
-					new Notice("Time tracking stopped");
-					await this.refresh();
-					// Update status bar if visible
-					if (this.plugin.statusBarItem) {
-						this.plugin.statusBarItem.setText(
-							"VaultMind: No active session"
+				void (async () => {
+					try {
+						await this.plugin.timeTracker.stopTracking();
+						new Notice("Time tracking stopped");
+						await this.refresh();
+						// Update status bar if visible
+						if (this.plugin.statusBarItem) {
+							this.plugin.statusBarItem.setText(
+								"No active session"
+							);
+						}
+					} catch {
+						// Failed to stop tracking
+						new Notice(
+							"Unable to stop time tracking. Please try again."
 						);
 					}
-				} catch {
-					// Failed to stop tracking
-					new Notice(
-						"Unable to stop time tracking. Please try again."
-					);
-				}
+				})();
 			});
 		} else {
 			const buttonContainer = container.createEl("div", {
@@ -1107,7 +1127,7 @@ export class DashboardView extends ItemView {
 			startBtn.addClass("vaultmind-interactive-btn");
 
 			// Use addEventListener for better compatibility
-			startBtn.addEventListener("click", async (e) => {
+			startBtn.addEventListener("click", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				console.debug("Start tracking button clicked");
@@ -1116,30 +1136,32 @@ export class DashboardView extends ItemView {
 				const modal = new TaskSelectionModal(
 					this.plugin.app,
 					data.tasks.pending || [],
-					async (selectedTask) => {
-						try {
-							const taskName = selectedTask
-								? selectedTask.content
-								: "Work Session";
-							const taskId = selectedTask
-								? selectedTask.id
-								: undefined;
-							await this.plugin.timeTracker.startTracking(
-								taskName,
-								taskId
-							);
-							new Notice(`Time tracking started: ${taskName}`);
-							await this.refresh();
-							// Update status bar if visible
-							if (this.plugin.statusBarItem) {
-								this.plugin.statusBarItem.setText(
-									"VaultMind: ⏱️ Tracking..."
+					(selectedTask) => {
+						void (async () => {
+							try {
+								const taskName = selectedTask
+									? selectedTask.content
+									: "Work Session";
+								const taskId = selectedTask
+									? selectedTask.id
+									: undefined;
+								await this.plugin.timeTracker.startTracking(
+									taskName,
+									taskId
 								);
+								new Notice(`Time tracking started: ${taskName}`);
+								await this.refresh();
+								// Update status bar if visible
+								if (this.plugin.statusBarItem) {
+									this.plugin.statusBarItem.setText(
+										"Tracking…"
+									);
+								}
+							} catch (error) {
+								console.error("Failed to start tracking:", error);
+								new Notice("Failed to start tracking");
 							}
-						} catch (error) {
-							console.error("Failed to start tracking:", error);
-							new Notice("Failed to start tracking");
-						}
+						})();
 					}
 				);
 				modal.open();

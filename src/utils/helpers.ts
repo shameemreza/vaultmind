@@ -1,14 +1,9 @@
-/* /skip The following are intentional design decisions:
- * 5. `any` types in generic utility functions (debounce, throttle, deepMerge, pick, omit, retry). These are generic utility functions that need to work with any type.
- *    Skip reason: These are generic utility functions that must accept any function signature or object type. Full typing would require complex overloads and reduce utility function flexibility.
- */
-
 import { TFile } from 'obsidian';
 import { format, formatRelative, differenceInDays, isToday, isTomorrow, isThisWeek } from 'date-fns';
 
 // ============= Debounce & Throttle =============
 
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
     func: T,
     delay: number
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
@@ -27,7 +22,7 @@ export function debounce<T extends (...args: any[]) => any>(
     };
 }
 
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: Parameters<T>) => ReturnType<T>>(
     func: T,
     limit: number
 ): (...args: Parameters<T>) => ReturnType<T> | undefined {
@@ -188,24 +183,25 @@ export function sortBy<T>(array: T[], keyFn: (item: T) => number | string): T[] 
 
 // ============= Object Utilities =============
 
-export function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
+export function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
     const result = { ...target };
     
     for (const key in source) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        const sourceValue = source[key];
+        if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
             result[key] = deepMerge(
-                result[key] || ({} as any),
-                source[key] as any
-            );
+                (result[key] || {}) as Record<string, unknown>,
+                sourceValue as Record<string, unknown>
+            ) as T[Extract<keyof T, string>];
         } else {
-            result[key] = source[key] as any;
+            result[key] = sourceValue as T[Extract<keyof T, string>];
         }
     }
     
     return result;
 }
 
-export function pick<T extends Record<string, any>, K extends keyof T>(
+export function pick<T extends Record<string, unknown>, K extends keyof T>(
     obj: T,
     keys: K[]
 ): Pick<T, K> {
@@ -220,7 +216,7 @@ export function pick<T extends Record<string, any>, K extends keyof T>(
     return result;
 }
 
-export function omit<T extends Record<string, any>, K extends keyof T>(
+export function omit<T extends Record<string, unknown>, K extends keyof T>(
     obj: T,
     keys: K[]
 ): Omit<T, K> {
@@ -326,14 +322,14 @@ export async function retryWithBackoff<T>(
     maxRetries: number = 3,
     baseDelayMs: number = 1000
 ): Promise<T> {
-    let lastError: any;
+    let lastError: Error | undefined;
     
     for (let i = 0; i < maxRetries; i++) {
         try {
             const result = await fn();
             return result;
         } catch (error) {
-            lastError = error;
+            lastError = error instanceof Error ? error : new Error(String(error));
             
             if (i < maxRetries - 1) {
                 const delay = baseDelayMs * Math.pow(2, i);

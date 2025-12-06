@@ -41,9 +41,9 @@ export class ContextManager {
                         context += addition;
                         currentLength += addition.length;
                     }
-                } catch (error) {
-                    console.error('Failed to read file:', file.path);
-                }
+				} catch {
+					console.error('Failed to read file:', file.path);
+				}
             }
         }
         

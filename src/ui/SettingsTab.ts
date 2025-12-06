@@ -14,11 +14,6 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName("VaultMind settings").setHeading();
-
-		// General Settings
-		new Setting(containerEl).setName("General").setHeading();
-
 		new Setting(containerEl)
 			.setName("Enable auto-indexing")
 			.setDesc("Automatically index your vault at regular intervals")
@@ -304,17 +299,19 @@ export class SettingsTab extends PluginSettingTab {
 				button
 					.setButtonText("Clear data")
 					.setWarning()
-					.onClick(async () => {
-						new ConfirmModal(
-							this.plugin.app,
-							"Are you sure? This will delete all VaultMind data!",
-							async () => {
+				.onClick(() => {
+					new ConfirmModal(
+						this.plugin.app,
+						"Are you sure? This will delete all VaultMind data!",
+						() => {
+							void (async () => {
 								const storage =
 									this.plugin.vaultIndexer.storage;
 								await storage.clear();
-								new Notice("All VaultMind data cleared");
-							},
-							"Clear Data",
+								new Notice("All data cleared");
+							})();
+						},
+						"Clear Data",
 							"Cancel"
 						).open();
 					})
@@ -324,9 +321,9 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Re-index vault")
 			.setDesc("Force a complete re-index of your vault")
 			.addButton((button) =>
-				button.setButtonText("Re-index").onClick(async () => {
-					await this.plugin.indexVault();
-				})
+			button.setButtonText("Re-index").onClick(() => {
+				void this.plugin.indexVault();
+			})
 			);
 	}
 }

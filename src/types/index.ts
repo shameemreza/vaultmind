@@ -1,10 +1,5 @@
 // VaultMind Type Definitions
 
-/* /skip The following are intentional design decisions:
- * 8. `Record<string, any>` for frontmatter and `EventHandler<T = any>`. These represent user-defined structures.
- *    Skip reason: Frontmatter is user-controlled data with arbitrary structure. EventHandler is a generic type that must accept any event data type.
- */
-
 import { App, TFile } from 'obsidian';
 
 // ============= Task Types =============
@@ -89,7 +84,7 @@ export interface IndexedNote {
     filePath?: string; // Store path to avoid circular references
     title: string;
     content: string;
-    frontmatter: Record<string, any>;
+    frontmatter: Record<string, unknown>;
     tasks: Set<string> | VaultMindTask[];
     tags: string[];
     links: Set<string> | string[];
@@ -439,7 +434,7 @@ export type DeepPartial<T> = {
 };
 
 export type AsyncFunction<T = void> = () => Promise<T>;
-export type EventHandler<T = any> = (data: T) => void;
+export type EventHandler<T = unknown> = (data: T) => void;
 
 // ============= Error Types =============
 export class VaultMindError extends Error {

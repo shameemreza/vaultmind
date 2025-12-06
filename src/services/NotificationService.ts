@@ -53,7 +53,7 @@ export class NotificationService implements INotificationService {
 			});
 		}
 
-		this.saveNotifications();
+		void this.saveNotifications();
 	}
 
 	getNotifications(unreadOnly: boolean = false): VaultMindNotification[] {
@@ -72,19 +72,20 @@ export class NotificationService implements INotificationService {
 		const notification = this.notifications.get(id);
 		if (notification) {
 			notification.read = true;
-			this.saveNotifications();
+			void this.saveNotifications();
 		}
 	}
 
 	clearNotifications(): void {
 		this.notifications.clear();
-		this.saveNotifications();
+		void this.saveNotifications();
 	}
 
 	scheduleReminder(taskId: string, time: Date): void {
 		// Cancel existing reminder for this task
-		if (this.scheduledReminders.has(taskId)) {
-			clearTimeout(this.scheduledReminders.get(taskId)!);
+		const existingReminder = this.scheduledReminders.get(taskId);
+		if (existingReminder) {
+			clearTimeout(existingReminder);
 		}
 
 		const delay = time.getTime() - Date.now();

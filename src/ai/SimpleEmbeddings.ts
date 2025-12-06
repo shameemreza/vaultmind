@@ -1,4 +1,3 @@
-import { VaultMindError } from '../types';
 
 /**
  * Simple embedding generation without heavy ML libraries
@@ -73,7 +72,7 @@ export class SimpleEmbeddings {
     /**
      * Generate embedding for text using TF-IDF and word vectors
      */
-    async generateEmbedding(text: string): Promise<Float32Array> {
+    generateEmbedding(text: string): Float32Array {
         const tokens = this.tokenize(text);
         const embedding = new Float32Array(this.dimensionality);
         
@@ -199,19 +198,19 @@ export class SimpleEmbeddings {
     /**
      * Find most similar items
      */
-    async findSimilar(
+    findSimilar(
         query: string, 
         items: { id: string; text: string; embedding?: Float32Array }[],
         topK: number = 5
-    ): Promise<Array<{ id: string; text: string; score: number }>> {
-        const queryEmbedding = await this.generateEmbedding(query);
+    ): Array<{ id: string; text: string; score: number }> {
+        const queryEmbedding = this.generateEmbedding(query);
         
         // Calculate similarities
-        const similarities = await Promise.all(items.map(async item => {
-            const itemEmbedding = item.embedding || await this.generateEmbedding(item.text);
+        const similarities = items.map(item => {
+            const itemEmbedding = item.embedding || this.generateEmbedding(item.text);
             const score = this.cosineSimilarity(queryEmbedding, itemEmbedding);
             return { id: item.id, text: item.text, score };
-        }));
+        });
         
         // Sort by similarity score
         return similarities

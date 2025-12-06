@@ -123,13 +123,16 @@ export class VaultIndexer implements IVaultIndexer {
 
 			this.index.lastIndexed = new Date();
 
+			// Clean up stale goals (goals whose source files no longer exist)
+			this.cleanupStaleGoals();
+
 			// Save index to storage
 			await this.saveIndex();
 
 			const duration = Date.now() - startTime;
 			console.debug(`VaultMind: Indexing completed in ${duration}ms`);
 			console.debug(
-				`VaultMind: Indexed ${this.index.notes.size} notes, ${this.index.tasks.size} tasks`
+				`VaultMind: Indexed ${this.index.notes.size} notes, ${this.index.tasks.size} tasks, ${this.index.goals.size} goals`
 			);
 
 			return this.index;
@@ -258,6 +261,32 @@ export class VaultIndexer implements IVaultIndexer {
 		}
 	}
 
+	/**
+	 * Clean up stale goals whose source files no longer exist
+	 */
+	private cleanupStaleGoals(): void {
+		const staleGoalIds: string[] = [];
+		
+		for (const [id, goal] of this.index.goals) {
+			if (goal.filePath) {
+				const file = this.app.vault.getAbstractFileByPath(goal.filePath);
+				if (!file) {
+					staleGoalIds.push(id);
+					console.debug(`VaultMind: Removing stale goal "${goal.title}" - file not found: ${goal.filePath}`);
+				}
+			}
+		}
+		
+		// Remove stale goals from index
+		for (const id of staleGoalIds) {
+			this.index.goals.delete(id);
+		}
+		
+		if (staleGoalIds.length > 0) {
+			console.debug(`VaultMind: Cleaned up ${staleGoalIds.length} stale goal(s)`);
+		}
+	}
+
 	search(query: string): Promise<IndexedNote[]> {
 		const results: IndexedNote[] = [];
 		const queryLower = query.toLowerCase();
@@ -293,29 +322,29 @@ export class VaultIndexer implements IVaultIndexer {
 		// Watch for file changes
 		this.app.vault.on("modify", (file) => {
 			if (file instanceof TFile && file.extension === "md") {
-				this.updateIndex(file);
+				void this.updateIndex(file);
 			}
 		});
 
 		// Watch for file creation
 		this.app.vault.on("create", (file) => {
 			if (file instanceof TFile && file.extension === "md") {
-				this.indexFile(file);
+				void this.indexFile(file);
 			}
 		});
 
 		// Watch for file deletion
 		this.app.vault.on("delete", (file) => {
 			if (file instanceof TFile) {
-				this.removeFromIndex(file.path);
+				void this.removeFromIndex(file.path);
 			}
 		});
 
 		// Watch for file rename
 		this.app.vault.on("rename", (file, oldPath) => {
 			if (file instanceof TFile && file.extension === "md") {
-				this.removeFromIndex(oldPath);
-				this.indexFile(file);
+				void this.removeFromIndex(oldPath);
+				void this.indexFile(file);
 			}
 		});
 	}
@@ -432,16 +461,16 @@ export class VaultIndexer implements IVaultIndexer {
 				file: null, // Don't serialize TFile object
 				tasks:
 					note.tasks instanceof Set
-						? Array.from(note.tasks as Set<string>)
-						: (note.tasks as VaultMindTask[]),
+						? Array.from(note.tasks)
+						: note.tasks,
 				links:
 					note.links instanceof Set
-						? Array.from(note.links as Set<string>)
-						: (note.links as string[]),
+						? Array.from(note.links)
+						: note.links,
 				backlinks:
 					note.backlinks instanceof Set
-						? Array.from(note.backlinks as Set<string>)
-						: (note.backlinks as string[]) || [],
+						? Array.from(note.backlinks)
+						: note.backlinks || [],
 				embeddingVector: note.embeddingVector || null,
 			} as SerializedNote,
 		]);
@@ -489,10 +518,10 @@ export class VaultIndexer implements IVaultIndexer {
 						Array.isArray(note.tasks) &&
 						note.tasks.length > 0 &&
 						typeof note.tasks[0] === "string"
-							? new Set(note.tasks as string[])
+							? new Set<string>(note.tasks as string[])
 							: (note.tasks as VaultMindTask[]),
-					links: new Set((note.links as string[]) || []),
-					backlinks: new Set((note.backlinks as string[]) || []),
+					links: new Set<string>(note.links || []),
+					backlinks: new Set<string>(note.backlinks || []),
 				} as IndexedNote,
 			])
 		);
@@ -509,7 +538,7 @@ export class VaultIndexer implements IVaultIndexer {
 					{
 						...goal,
 						file: null,
-						linkedTasks: goal.linkedTasks as string[], // VaultMindGoal expects string[], not Set
+						linkedTasks: goal.linkedTasks, // VaultMindGoal expects string[], not Set
 						milestones: goal.milestones || [],
 					} as VaultMindGoal,
 				]

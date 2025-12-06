@@ -1,11 +1,40 @@
-/* /skip The following are intentional design decisions:
- * 6. `any` types in parsing functions (frontmatter, milestones, time blocks). These handle dynamic frontmatter structures and flexible user inputs.
- *    Skip reason: Frontmatter and user content can have arbitrary shapes. Full typing would require knowing all possible user-defined structures in advance.
- */
-
 import { TFile, CachedMetadata } from 'obsidian';
-import { VaultMindTask, VaultMindGoal } from '../types';
+import { VaultMindTask, VaultMindGoal, Milestone } from '../types';
 import { generateTaskId, generateGoalId } from './helpers';
+
+type GoalStatus = 'active' | 'completed' | 'paused' | 'cancelled';
+
+interface GoalFrontmatter {
+    goal?: string | GoalData;
+    objective?: string | GoalData;
+}
+
+interface GoalData {
+    title?: string;
+    name?: string;
+    description?: string;
+    progress?: number;
+    targetDate?: string;
+    status?: GoalStatus;
+    category?: string;
+    milestones?: MilestoneInput[];
+}
+
+interface MilestoneInput {
+    id?: string;
+    title?: string;
+    name?: string;
+    completed?: boolean;
+    completedAt?: string;
+    targetDate?: string;
+}
+
+interface TimeBlock {
+    startTime?: Date;
+    endTime?: Date;
+    duration?: number;
+    description?: string;
+}
 
 // ============= Task Parsing =============
 
@@ -233,13 +262,13 @@ export function parseTaskMetadata(content: string): {
 export function extractGoals(
     content: string,
     file: TFile,
-    frontmatter: Record<string, any>
+    frontmatter: GoalFrontmatter
 ): VaultMindGoal[] {
     const goals: VaultMindGoal[] = [];
     
     // Check frontmatter for goal definition
-    if (frontmatter.goal || frontmatter.objective) {
-        const goalData = frontmatter.goal || frontmatter.objective;
+    const goalData = frontmatter.goal || frontmatter.objective;
+    if (goalData) {
         const goal = parseGoalFromFrontmatter(goalData, file);
         if (goal) {
             goals.push(goal);
@@ -259,7 +288,7 @@ export function extractGoals(
 }
 
 function parseGoalFromFrontmatter(
-    goalData: any,
+    goalData: string | GoalData,
     file: TFile
 ): VaultMindGoal | null {
     if (typeof goalData === 'string') {
@@ -331,7 +360,7 @@ function parseGoalFromSection(section: string, file: TFile): VaultMindGoal | nul
     if (!titleMatch) return null;
     
     const title = titleMatch[1];
-    const milestones: any[] = [];
+    const milestones: Milestone[] = [];
     let description = '';
     let targetDate: Date | undefined;
     let category: string | undefined;
@@ -373,7 +402,7 @@ function parseGoalFromSection(section: string, file: TFile): VaultMindGoal | nul
         targetDate,
         progress: calculateProgressFromMilestones(milestones),
         status: 'active',
-        milestones: parseGoalMilestones(milestones),
+        milestones,
         linkedTasks: [],
         createdAt: new Date(file.stat.ctime),
         updatedAt: new Date(file.stat.mtime),
@@ -381,10 +410,10 @@ function parseGoalFromSection(section: string, file: TFile): VaultMindGoal | nul
     };
 }
 
-function parseGoalMilestones(milestones: any[]): any[] {
+function parseGoalMilestones(milestones: MilestoneInput[]): Milestone[] {
     if (!Array.isArray(milestones)) return [];
     
-    return milestones.map((m, index) => {
+    return milestones.map((m, index): Milestone => {
         if (typeof m === 'string') {
             return {
                 id: generateGoalId(m),
@@ -402,7 +431,7 @@ function parseGoalMilestones(milestones: any[]): any[] {
     });
 }
 
-function calculateProgressFromMilestones(milestones: any[]): number {
+function calculateProgressFromMilestones(milestones: Milestone[]): number {
     if (milestones.length === 0) return 0;
     
     const completed = milestones.filter(m => m.completed).length;
@@ -529,13 +558,8 @@ export function parseMarkdownContent(content: string): {
 
 // ============= Time Parsing =============
 
-export function parseTimeBlocks(content: string): {
-    startTime?: Date;
-    endTime?: Date;
-    duration?: number;
-    description?: string;
-}[] {
-    const timeBlocks: any[] = [];
+export function parseTimeBlocks(content: string): TimeBlock[] {
+    const timeBlocks: TimeBlock[] = [];
     const timeBlockRegex = /(?:^|\n)(?:Time|Duration|Session):\s*(.+?)(?:\n|$)/gi;
     let match;
     
@@ -550,7 +574,7 @@ export function parseTimeBlocks(content: string): {
     return timeBlocks;
 }
 
-function parseTimeString(str: string): any {
+function parseTimeString(str: string): TimeBlock | null {
     // Parse various time formats
     // Examples: "10:00-11:30", "2h 30m", "9am to 11:30am"
     

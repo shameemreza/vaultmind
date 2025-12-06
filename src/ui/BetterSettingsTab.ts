@@ -13,9 +13,6 @@ export class BetterSettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// Header
-		new Setting(containerEl).setName("VaultMind settings").setHeading();
-
 		// General Settings
 		this.createGeneralSettings(containerEl);
 
@@ -33,7 +30,6 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createGeneralSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("General").setHeading();
 
 		new Setting(containerEl)
 			.setName("Auto-index vault")
@@ -155,7 +151,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createOpenAISettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("OpenAI settings").setHeading();
+		new Setting(containerEl).setName("OpenAI").setHeading();
 
 		new Setting(containerEl)
 			.setName("OpenAI API key")
@@ -212,7 +208,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createClaudeSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("Claude settings").setHeading();
+		new Setting(containerEl).setName("Claude").setHeading();
 
 		new Setting(containerEl)
 			.setName("Claude API key")
@@ -265,7 +261,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createOllamaSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("Ollama settings").setHeading();
+		new Setting(containerEl).setName("Ollama").setHeading();
 
 		new Setting(containerEl)
 			.setName("Ollama endpoint")
@@ -499,7 +495,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createGeminiSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("Google Gemini settings").setHeading();
+		new Setting(containerEl).setName("Google Gemini").setHeading();
 
 		new Setting(containerEl)
 			.setName("Gemini API key")
@@ -538,7 +534,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createDeepSeekSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("DeepSeek settings").setHeading();
+		new Setting(containerEl).setName("DeepSeek").setHeading();
 
 		new Setting(containerEl)
 			.setName("DeepSeek API key")
@@ -575,7 +571,7 @@ export class BetterSettingsTab extends PluginSettingTab {
 	}
 
 	private createGrokSettings(containerEl: HTMLElement) {
-		new Setting(containerEl).setName("Grok settings (X.AI)").setHeading();
+		new Setting(containerEl).setName("Grok (X.AI)").setHeading();
 
 		new Setting(containerEl)
 			.setName("Grok API key")
